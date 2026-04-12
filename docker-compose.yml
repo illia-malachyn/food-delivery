@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_DB: orders
+      POSTGRES_USER: order_user
+      POSTGRES_PASSWORD: order_password
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U order_user -d orders"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  order:
+    build:
+      context: ./order
+      dockerfile: Dockerfile
+    container_name: order
+    environment:
+      DATABASE_URL: postgres://order_user:order_password@postgres:5432/orders?sslmode=disable
+    ports:
+      - "9876:9876"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  payment:
+    build:
+      context: ./payment
+      dockerfile: Dockerfile
+    container_name: payment
+
+  delivery:
+    build:
+      context: ./delivery
+      dockerfile: Dockerfile
+    container_name: delivery
+
+  restaurant:
+    build:
+      context: ./restaurant
+      dockerfile: Dockerfile
+    container_name: restaurant
+
+volumes:
+  postgres_data:
