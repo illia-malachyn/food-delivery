@@ -35,6 +35,22 @@ Requirements:
 
 - Docker + Docker Compose
 
+Environment:
+
+- configure DB settings in `.env` (example values):
+
+```bash
+POSTGRES_ADMIN_USER=postgres
+POSTGRES_ADMIN_PASSWORD=postgres
+POSTGRES_ADMIN_DB=postgres
+ORDER_DB_NAME=orders
+ORDER_DB_USER=orders_user
+ORDER_DB_PASSWORD=orders_password
+ORDER_DB_HOST=localhost
+ORDER_DB_PORT=5432
+ORDER_DB_SSLMODE=disable
+```
+
 Start all services:
 
 ```bash
@@ -53,6 +69,13 @@ Stop:
 
 ```bash
 docker compose down
+```
+
+If you change DB/user bootstrap variables after the first run, recreate the Postgres volume:
+
+```bash
+docker compose down -v
+docker compose up --build
 ```
 
 ## Run Locally (Go)
@@ -88,7 +111,6 @@ curl -X POST http://localhost:9876/orders \
 
 ## Next Learning Steps
 
-- add domain events for order lifecycle (created, paid, delivered)
-- publish/consume events between services (EDA flow)
-- add idempotency and retry handling for message consumers
-- add tests per layer (domain first)
+- add postgres 
+- impl event publisher with outbox table solving the dual-write problem
+- add message broker (kafka/rabbitmq)

@@ -7,8 +7,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/illia-malachyn/microservices/order/application"
-	"github.com/illia-malachyn/microservices/order/domain"
+	"github.com/illia-malachyn/food-delivery/order/application"
+	"github.com/illia-malachyn/food-delivery/order/domain"
 )
 
 type PostgresOrderRepository struct {

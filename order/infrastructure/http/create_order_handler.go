@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/illia-malachyn/microservices/order/application"
+	"github.com/illia-malachyn/food-delivery/order/application"
 )
 
 func CreateOrderHandler(orderService *application.OrderService) http.HandlerFunc {

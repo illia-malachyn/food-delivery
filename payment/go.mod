@@ -1,3 +1,3 @@
-module github.com/illia-malachyn/microservices/payment
+module github.com/illia-malachyn/food-delivery/payment
 
 go 1.25.0

@@ -1,4 +1,4 @@
-module github.com/illia-malachyn/microservices/order
+module github.com/illia-malachyn/food-delivery/order
 
 go 1.25.0
 

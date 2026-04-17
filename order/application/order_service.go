@@ -3,7 +3,7 @@ package application
 import (
 	"context"
 
-	"github.com/illia-malachyn/microservices/order/domain"
+	"github.com/illia-malachyn/food-delivery/order/domain"
 )
 
 type OrderService struct {

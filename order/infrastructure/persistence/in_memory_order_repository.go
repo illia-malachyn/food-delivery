@@ -5,8 +5,8 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/illia-malachyn/microservices/order/application"
-	"github.com/illia-malachyn/microservices/order/domain"
+	"github.com/illia-malachyn/food-delivery/order/application"
+	"github.com/illia-malachyn/food-delivery/order/domain"
 )
 
 var ErrOrderNotFound = errors.New("order not found")
