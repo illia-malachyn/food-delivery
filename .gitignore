@@ -1,5 +1,27 @@
-*idea/
-*claude/
+# IDE/editor metadata
+.idea/
+**/.idea/
+.claude/
+**/.claude/
+.vscode/
+**/.vscode/
+
+# Environment and OS files
 .env
+**/.env
 .DS_Store
+**/.DS_Store
+
+# Build outputs and binaries (all services)
+bin/
+**/bin/
+dist/
+**/dist/
+tmp/
+**/tmp/
+out/
+**/out/
 app
+**/app
+!**/cmd/app
+!**/cmd/app/**
