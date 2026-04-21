@@ -2,13 +2,12 @@ services:
   postgres:
     image: postgres:17-alpine
     container_name: postgres
+    env_file:
+      - ./order/.env
     environment:
       POSTGRES_DB: ${POSTGRES_ADMIN_DB}
       POSTGRES_USER: ${POSTGRES_ADMIN_USER}
       POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
-      ORDER_DB_NAME: ${ORDER_DB_NAME}
-      ORDER_DB_USER: ${ORDER_DB_USER}
-      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD}
     ports:
       - "5432:5432"
     healthcheck:
@@ -17,26 +16,43 @@ services:
       timeout: 3s
       retries: 10
     volumes:
+      # Persist PostgreSQL data across container restarts
       - postgres_data:/var/lib/postgresql/data
-      - ./docker/postgres/init:/docker-entrypoint-initdb.d
+      # Auto-run initialization scripts (.sh/.sql) on first startup when data directory is empty
+      # Scripts execute alphabetically - use prefixes like 01-, 02- to control order
+      - ./order/docker/postgres/init:/docker-entrypoint-initdb.d
+
+  order-migrate:
+    build:
+      context: ./order
+      dockerfile: Dockerfile
+    container_name: order-migrate
+    env_file:
+      - ./order/.env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["/usr/local/bin/migrate"]
+    restart: on-failure
 
   order:
     build:
       context: ./order
       dockerfile: Dockerfile
     container_name: order
+    env_file:
+      - ./order/.env
     environment:
-      ORDER_DB_NAME: ${ORDER_DB_NAME}
-      ORDER_DB_USER: ${ORDER_DB_USER}
-      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD}
-      ORDER_DB_HOST: postgres
-      ORDER_DB_PORT: ${ORDER_DB_PORT}
-      ORDER_DB_SSLMODE: ${ORDER_DB_SSLMODE}
+      DB_HOST: postgres
+      DB_PORT: 5432
     ports:
       - "9876:9876"
     depends_on:
-      postgres:
-        condition: service_healthy
+      order-migrate:
+        condition: service_completed_successfully
 
   payment:
     build:
@@ -57,4 +73,6 @@ services:
     container_name: restaurant
 
 volumes:
+  # Named volume for PostgreSQL data persistence
+  # Remove with: docker compose down -v
   postgres_data:

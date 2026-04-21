@@ -12,12 +12,10 @@ This repository is a playground to practice:
 
 ## Microservices
 
-- `order` (currently has HTTP + Postgres integration)
+- `order`
 - `payment`
 - `delivery`
 - `restaurant`
-
-At this stage, `payment`, `delivery`, and `restaurant` are scaffolded services with startup entrypoints.
 
 ## Project Structure
 
@@ -54,7 +52,7 @@ ORDER_DB_SSLMODE=disable
 Start all services:
 
 ```bash
-docker compose up --build
+docker compose up --build -d
 ```
 
 Services started by compose:
@@ -78,21 +76,6 @@ docker compose down -v
 docker compose up --build
 ```
 
-## Run Locally (Go)
-
-Requirements:
-
-- Go 1.25+
-
-Run a service:
-
-```bash
-go run ./order/cmd/app
-go run ./payment/cmd/app
-go run ./delivery/cmd/app
-go run ./restaurant/cmd/app
-```
-
 ## Order API (Current)
 
 Create order:
@@ -109,8 +92,62 @@ curl -X POST http://localhost:9876/orders \
   -d '{"user_id":"u-1","item_id":"pizza","quantity":2}'
 ```
 
+## Run migrations
+
+From the `order` service directory:
+
+```bash
+cd order
+```
+
+Create migration:
+
+```bash
+make migrate-create NAME=migration_name
+```
+
+Run migrations:
+
+```bash
+make migrate-up
+```
+
+Rollback last migration:
+
+```bash
+make migrate-down
+```
+
+Show current migration version:
+
+```bash
+make migrate-version
+```
+
 ## Next Learning Steps
 
 - add postgres 
-- impl event publisher with outbox table solving the dual-write problem
-- add message broker (kafka/rabbitmq)
+- add cloud secret manager
+- host app somewhere (gcp/aws)
+- impl event publisher (polling) with outbox table solving the dual-write problem
+- add Debezium or self-written CDC
+- add message broker (kafka/rabbitmq) with auto-commit=false
+- add dedup table
+- write upcaster for new versions of events
+- add orchestrating saga with temporal or self-written
+- add choreography saga
+- add idempotent consumers
+- use cqrs in some service
+- use clean-arch in one service (with Presenters)
+- add CI
+- add CD
+- add k8s
+- add auth (auth or api gateway) with access and refresh tokens
+- add monitoring
+- add load balancer
+- scale microservices horizontally
+- add private VPC for a system
+- ? add minVersion to cqrs commands to fix the read-your-writes problem
+- build ACL in some service
+- ? use event sourcing? (I want to see how Reconstitute() func work)
+- 
