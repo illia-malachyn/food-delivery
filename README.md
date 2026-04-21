@@ -44,9 +44,15 @@ POSTGRES_ADMIN_DB=postgres
 ORDER_DB_NAME=orders
 ORDER_DB_USER=orders_user
 ORDER_DB_PASSWORD=orders_password
-ORDER_DB_HOST=localhost
-ORDER_DB_PORT=5432
-ORDER_DB_SSLMODE=disable
+PAYMENT_DB_NAME=payments
+PAYMENT_DB_USER=payments_user
+PAYMENT_DB_PASSWORD=payments_password
+DELIVERY_DB_NAME=deliveries
+DELIVERY_DB_USER=deliveries_user
+DELIVERY_DB_PASSWORD=deliveries_password
+RESTAURANT_DB_NAME=restaurants
+RESTAURANT_DB_USER=restaurants_user
+RESTAURANT_DB_PASSWORD=restaurants_password
 ```
 
 Start all services:
@@ -58,6 +64,10 @@ docker compose up --build -d
 Services started by compose:
 
 - `postgres` on `localhost:5432`
+- `order-migrate`
+- `payment-migrate`
+- `delivery-migrate`
+- `restaurant-migrate`
 - `order` on `localhost:9876`
 - `payment`
 - `delivery`
@@ -94,10 +104,27 @@ curl -X POST http://localhost:9876/orders \
 
 ## Run migrations
 
-From the `order` service directory:
+Root `Makefile` (all services or selected one):
+
+```bash
+# Run for all services
+make migrate-up-all
+make migrate-down-all
+make migrate-version-all
+make migrate-create-all NAME=migration_name
+
+# Run for one service
+make migrate-up SERVICE=order
+make migrate-down SERVICE=payment
+make migrate-version SERVICE=delivery
+make migrate-create SERVICE=restaurant NAME=migration_name
+```
+
+Per-service `Makefile` (inside `order`, `payment`, `delivery`, `restaurant`):
 
 ```bash
 cd order
+# or: cd payment / cd delivery / cd restaurant
 ```
 
 Create migration:
