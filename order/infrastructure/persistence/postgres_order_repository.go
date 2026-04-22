@@ -2,6 +2,7 @@ package persistence
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -23,7 +24,7 @@ func NewPostgresOrderRepository(connPool *pgxpool.Pool) *PostgresOrderRepository
 	}
 }
 
-func (p *PostgresOrderRepository) SaveOrder(ctx context.Context, order *domain.Order) error {
+func (p *PostgresOrderRepository) SaveOrder(ctx context.Context, order *domain.Order, events []application.IntegrationEvent) error {
 	return pgx.BeginFunc(ctx, p.connPool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(
 			ctx,
@@ -31,7 +32,39 @@ func (p *PostgresOrderRepository) SaveOrder(ctx context.Context, order *domain.O
 			 VALUES ($1, $2, $3, $4)`,
 			order.ID(), order.UserID(), order.ItemID(), order.Quantity(),
 		)
-		return err
+		if err != nil {
+			return err
+		}
+
+		for _, event := range events {
+			payload, marshalErr := json.Marshal(event)
+			if marshalErr != nil {
+				return fmt.Errorf("cannot marshal integration event %s v%d: %w", event.EventName(), event.EventVersion(), marshalErr)
+			}
+
+			_, execErr := tx.Exec(
+				ctx,
+				`INSERT INTO outbox (
+					aggregate_type,
+					aggregate_id,
+					event_name,
+					event_version,
+					payload,
+					occurred_at
+				) VALUES ($1, $2, $3, $4, $5, $6)`,
+				event.AggregateType(),
+				event.AggregateID(),
+				event.EventName(),
+				event.EventVersion(),
+				payload,
+				event.EventOccurredAt(),
+			)
+			if execErr != nil {
+				return fmt.Errorf("cannot insert outbox event %s v%d: %w", event.EventName(), event.EventVersion(), execErr)
+			}
+		}
+
+		return nil
 	})
 }
 

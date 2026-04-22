@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-type domainEvent interface {
+type DomainEvent interface {
 	EventName() string
 }
 
@@ -15,6 +15,9 @@ type EventBase struct {
 
 type OrderPlacedEvent struct {
 	EventBase
+	UserID   string
+	ItemID   string
+	Quantity uint
 }
 
 func (e OrderPlacedEvent) EventName() string {

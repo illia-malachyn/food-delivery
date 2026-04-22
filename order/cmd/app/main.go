@@ -24,8 +24,8 @@ func main() {
 	}
 
 	postgresOrderRepository := persistence.NewPostgresOrderRepository(connPool)
-	//inMemoryOrderRepository := persistence.NewInMemoryOrderRepository()
-	orderService := application.NewOrderService(postgresOrderRepository)
+	eventUpcaster := application.NewIntegrationEventUpcaster()
+	orderService := application.NewOrderService(postgresOrderRepository, eventUpcaster)
 	orderHandler := httpinfra.CreateOrderHandler(orderService)
 
 	http.Handle("/orders", orderHandler)

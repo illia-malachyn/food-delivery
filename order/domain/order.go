@@ -16,7 +16,7 @@ type Order struct {
 	userId   string
 	itemID   string
 	quantity uint
-	events   []domainEvent
+	events   []DomainEvent
 }
 
 func NewOrder(userId string, itemId string, quantity uint) (*Order, error) {
@@ -51,12 +51,15 @@ func (o *Order) Place() error {
 			OrderID:    o.id,
 			OccurredAt: time.Now(),
 		},
+		UserID:   o.userId,
+		ItemID:   o.itemID,
+		Quantity: o.quantity,
 	})
 
 	return nil
 }
 
-func (o *Order) FlushEvents() []domainEvent {
+func (o *Order) FlushEvents() []DomainEvent {
 	events := o.events
 	o.events = nil
 	return events
