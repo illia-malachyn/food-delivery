@@ -10,6 +10,7 @@ Educational Go project for practicing Event-Driven Architecture (EDA) and Domain
 - `restaurant`
 
 Detailed domain/event modeling notes are in [`docs/architecture.md`](docs/architecture.md).
+Order-specific rules are in [`docs/order-business-rules.md`](docs/order-business-rules.md).
 
 ## Current Runtime Status
 
@@ -105,6 +106,20 @@ curl -X POST http://localhost:9876/orders \
 ```
 
 Expected result: HTTP `200 OK` on success.
+
+Confirm order:
+
+```bash
+curl -X POST http://localhost:9876/orders/<order-id>/confirm
+```
+
+Cancel order:
+
+```bash
+curl -X POST http://localhost:9876/orders/<order-id>/cancel \
+  -H "Content-Type: application/json" \
+  -d '{"reason":"payment failed"}'
+```
 
 ## Migrations
 

@@ -20,7 +20,7 @@ type OrderPlacedEvent struct {
 }
 
 func (e OrderPlacedEvent) EventName() string {
-	return "OrderPlacedEvent"
+	return "OrderPlaced"
 }
 
 func (e OrderPlacedEvent) EventVersion() int {
@@ -50,7 +50,7 @@ type OrderPlacedEventV2 struct {
 }
 
 func (e OrderPlacedEventV2) EventName() string {
-	return "OrderPlacedEvent"
+	return "OrderPlaced"
 }
 
 func (e OrderPlacedEventV2) EventVersion() int {
@@ -66,5 +66,32 @@ func (e OrderPlacedEventV2) AggregateType() string {
 }
 
 func (e OrderPlacedEventV2) EventOccurredAt() time.Time {
+	return e.OccurredAt
+}
+
+type OrderCancelledEvent struct {
+	Version    int       `json:"version"`
+	OrderID    string    `json:"order_id"`
+	Reason     string    `json:"reason"`
+	OccurredAt time.Time `json:"occurred_at"`
+}
+
+func (e OrderCancelledEvent) EventName() string {
+	return "OrderCancelled"
+}
+
+func (e OrderCancelledEvent) EventVersion() int {
+	return e.Version
+}
+
+func (e OrderCancelledEvent) AggregateID() string {
+	return e.OrderID
+}
+
+func (e OrderCancelledEvent) AggregateType() string {
+	return "order"
+}
+
+func (e OrderCancelledEvent) EventOccurredAt() time.Time {
 	return e.OccurredAt
 }

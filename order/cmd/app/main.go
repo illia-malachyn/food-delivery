@@ -54,9 +54,13 @@ func main() {
 	eventUpcaster := application.NewIntegrationEventUpcaster()
 	orderService := application.NewOrderService(postgresOrderRepository, eventUpcaster)
 	orderHandler := httpinfra.CreateOrderHandler(orderService)
+	confirmOrderHandler := httpinfra.ConfirmOrderHandler(orderService)
+	cancelOrderHandler := httpinfra.CancelOrderHandler(orderService)
 
 	mux := http.NewServeMux()
 	mux.Handle("/orders", orderHandler)
+	mux.Handle("/orders/{id}/confirm", confirmOrderHandler)
+	mux.Handle("/orders/{id}/cancel", cancelOrderHandler)
 
 	server := &http.Server{
 		Addr:    ":9876",
