@@ -1,29 +1,28 @@
 # Food Delivery
 
-Educational project for learning **Event-Driven Architecture (EDA)** with **Domain-Driven Design (DDD)** in Go.
+Educational Go project for practicing Event-Driven Architecture (EDA) and Domain-Driven Design (DDD) with multiple bounded-context services.
 
-## Goal
-
-This repository is a playground to practice:
-
-- splitting a system into bounded-context microservices
-- modeling domain logic with DDD layers (`domain`, `application`, `infrastructure`)
-- evolving service-to-service communication toward event-driven flows
-
-## Microservices
+## Services
 
 - `order`
 - `payment`
 - `delivery`
 - `restaurant`
 
-## Business Rules (Event Storming)
+Detailed domain/event modeling notes are in [`docs/architecture.md`](docs/architecture.md).
 
-Detailed bounded contexts, events, and event types are documented in:
+## Current Runtime Status
 
-- [`docs/architecture.md`](docs/architecture.md)
+- `order`:
+  - HTTP API: `POST /orders` on `localhost:9876`
+  - PostgreSQL persistence
+  - Outbox relay + Kafka publisher (`order.events` topic by default)
+- `payment`, `delivery`, `restaurant`:
+  - basic HTTP app stubs running on `:8080` inside containers
+  - PostgreSQL migrations are wired
+  - no host port published in `docker-compose.yml` yet
 
-## Project Structure
+## Project Layout
 
 ```text
 food-delivery/
@@ -31,17 +30,18 @@ food-delivery/
   payment/
   delivery/
   restaurant/
+  docs/
+  docker-compose.yml
 ```
 
-## Run With Docker Compose
+## Quick Start (Docker Compose)
 
 Requirements:
 
-- Docker + Docker Compose
+- Docker
+- Docker Compose
 
-Environment:
-
-- configure DB settings in `.env` (example values):
+Root `.env` should contain DB bootstrap values (already present in this repo):
 
 ```bash
 POSTGRES_ADMIN_USER=postgres
@@ -61,23 +61,18 @@ RESTAURANT_DB_USER=restaurants_user
 RESTAURANT_DB_PASSWORD=restaurants_password
 ```
 
-Start all services:
+Start everything:
 
 ```bash
 docker compose up --build -d
 ```
 
-Services started by compose:
+Compose starts:
 
-- `postgres` on `localhost:5432`
-- `order-migrate`
-- `payment-migrate`
-- `delivery-migrate`
-- `restaurant-migrate`
-- `order` on `localhost:9876`
-- `payment`
-- `delivery`
-- `restaurant`
+- `postgres` (`localhost:5432`)
+- `kafka` (`localhost:9092`)
+- one migration job per service (`*-migrate`)
+- application containers: `order`, `payment`, `delivery`, `restaurant`
 
 Stop:
 
@@ -85,19 +80,20 @@ Stop:
 docker compose down
 ```
 
-If you change DB/user bootstrap variables after the first run, recreate the Postgres volume:
+If you change DB bootstrap variables after first run, recreate Postgres data:
 
 ```bash
 docker compose down -v
-docker compose up --build
+docker compose up --build -d
 ```
 
-## Order API (Current)
+## Order API
 
 Create order:
 
 ```http
 POST /orders
+Content-Type: application/json
 ```
 
 Example:
@@ -108,71 +104,59 @@ curl -X POST http://localhost:9876/orders \
   -d '{"user_id":"u-1","item_id":"pizza","quantity":2}'
 ```
 
-## Run migrations
+Expected result: HTTP `200 OK` on success.
 
-Root `Makefile` (all services or selected one):
+## Migrations
+
+The project has:
+
+- root `Makefile` to run migration commands across services
+- per-service `Makefile` in each service directory
+
+Root usage:
 
 ```bash
-# Run for all services
+# all services
 make migrate-up-all
 make migrate-down-all
 make migrate-version-all
-make migrate-create-all NAME=migration_name
+make migrate-create-all NAME=add_new_column
 
-# Run for one service
+# single service
 make migrate-up SERVICE=order
 make migrate-down SERVICE=payment
 make migrate-version SERVICE=delivery
-make migrate-create SERVICE=restaurant NAME=migration_name
+make migrate-create SERVICE=restaurant NAME=add_index
 ```
 
-Per-service `Makefile` (inside `order`, `payment`, `delivery`, `restaurant`):
+Per-service usage (example: `order/`):
 
 ```bash
 cd order
-# or: cd payment / cd delivery / cd restaurant
-```
-
-Create migration:
-
-```bash
-make migrate-create NAME=migration_name
-```
-
-Run migrations:
-
-```bash
 make migrate-up
-```
-
-Rollback last migration:
-
-```bash
 make migrate-down
-```
-
-Show current migration version:
-
-```bash
 make migrate-version
+make migrate-create NAME=add_new_column
 ```
+
+Note: these targets require the `migrate` CLI in your PATH.
 
 ## Next Learning Steps
 
-- add postgres 
+- add postgres +
 - add cloud secret manager
 - host app somewhere (gcp/aws)
-- impl event publisher (polling) with outbox table solving the dual-write problem
+- impl event publisher (polling) with outbox table solving the dual-write problem +
 - add Debezium or self-written CDC
-- add message broker (kafka/rabbitmq) with auto-commit=false
+- add message broker (kafka/rabbitmq) with auto-commit=false +
 - add dedup table
-- write upcaster for new versions of events
+- write upcaster for new versions of events +
 - add orchestrating saga with temporal or self-written
 - add choreography saga
 - add idempotent consumers
 - use cqrs in some service
 - use clean-arch in one service (with Presenters)
-- add CI
+- add CI +
 - add CD
 - add k8s
 - add auth (auth or api gateway) with access and refresh tokens
@@ -183,4 +167,3 @@ make migrate-version
 - ? add minVersion to cqrs commands to fix the read-your-writes problem
 - build ACL in some service
 - ? use event sourcing? (I want to see how Reconstitute() func work)
-- 
