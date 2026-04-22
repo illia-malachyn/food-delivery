@@ -1,4 +1,4 @@
-.PHONY: migrate-up migrate-down migrate-create migrate-force migrate-version
+.PHONY: migrate-up migrate-down migrate-create migrate-force migrate-version regen-mocks
 
 # Load environment variables from .env file
 include .env
@@ -29,3 +29,14 @@ migrate-create:
 # Show current migration version
 migrate-version:
 	migrate -path $(MIGRATIONS_DIR) -database "$(DB_URL)" version
+
+regen-mocks:
+	@dirs=$$(rg -l 'type[[:space:]]+[A-Za-z0-9_]+[[:space:]]+interface[[:space:]]*\{' -g'*.go' | while read -r file; do dirname "$$file"; done | sort -u); \
+	if [ -z "$$dirs" ]; then \
+		echo "No interfaces found"; \
+		exit 0; \
+	fi; \
+	for dir in $$dirs; do \
+		echo "==> mockery: $$dir"; \
+		go run github.com/vektra/mockery/v2@v2.53.5 --all --dir "$$dir" --output "$$dir/mocks" --outpkg mocks --with-expecter; \
+	done

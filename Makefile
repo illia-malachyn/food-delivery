@@ -1,4 +1,4 @@
-.PHONY: migrate-up-all migrate-down-all migrate-version-all migrate-create-all migrate-up migrate-down migrate-version migrate-create
+.PHONY: migrate-up-all migrate-down-all migrate-version-all migrate-create-all migrate-up migrate-down migrate-version migrate-create regen-mocks
 
 SERVICES := order payment delivery restaurant
 SERVICE ?=
@@ -38,3 +38,9 @@ migrate-up migrate-down migrate-version migrate-create:
 		exit 1; \
 	fi
 	$(MAKE) -C $(SERVICE) $@ NAME=$(NAME)
+
+regen-mocks:
+	@for svc in $(SERVICES); do \
+		echo "==> $$svc: regen-mocks"; \
+		$(MAKE) -C $$svc regen-mocks; \
+	done
