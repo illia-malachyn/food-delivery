@@ -17,6 +17,12 @@ This repository is a playground to practice:
 - `delivery`
 - `restaurant`
 
+## Business Rules (Event Storming)
+
+Detailed bounded contexts, events, and event types are documented in:
+
+- [`docs/architecture.md`](docs/architecture.md)
+
 ## Project Structure
 
 ```text
