@@ -127,6 +127,19 @@ OpenAPI 3.0 specs are available per service:
 - [`delivery/openapi.yaml`](delivery/openapi.yaml) (internal service URL: `http://delivery:8080`)
 - [`restaurant/openapi.yaml`](restaurant/openapi.yaml) (internal service URL: `http://restaurant:8080`)
 
+Visual API docs are published with Redoc via GitHub Pages:
+
+- index: `https://<owner>.github.io/<repo>/`
+- per service:
+  - `https://<owner>.github.io/<repo>/api/auth.html`
+  - `https://<owner>.github.io/<repo>/api/order.html`
+  - `https://<owner>.github.io/<repo>/api/payment.html`
+  - `https://<owner>.github.io/<repo>/api/delivery.html`
+  - `https://<owner>.github.io/<repo>/api/restaurant.html`
+
+Deployment workflow: [`.github/workflows/docs-pages.yml`](.github/workflows/docs-pages.yml).
+In repository settings, set Pages source to `GitHub Actions` once; after that, pushes to `main` that change OpenAPI specs or `docs/api/**` redeploy docs automatically.
+
 Quick Swagger UI preview for any spec:
 
 ```bash

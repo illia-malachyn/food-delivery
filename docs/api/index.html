@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Food Delivery API Docs</title>
+    <style>
+      :root {
+        --bg: #f5f7fb;
+        --card: #ffffff;
+        --text: #0f172a;
+        --muted: #475569;
+        --accent: #0f766e;
+        --border: #dbe3ef;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif;
+        background:
+          radial-gradient(circle at 10% 10%, #e0f2fe 0%, transparent 35%),
+          radial-gradient(circle at 90% 90%, #ccfbf1 0%, transparent 40%),
+          var(--bg);
+        color: var(--text);
+      }
+
+      .container {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 40px 20px 64px;
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        font-size: 2rem;
+      }
+
+      p {
+        margin: 0 0 24px;
+        color: var(--muted);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+      }
+
+      .card h2 {
+        margin: 0 0 10px;
+        font-size: 1.1rem;
+      }
+
+      .links {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <h1>Food Delivery API Docs</h1>
+      <p>Visual OpenAPI documentation powered by Redoc.</p>
+
+      <section class="grid">
+        <article class="card">
+          <h2>Auth API</h2>
+          <div class="links">
+            <a href="auth.html">View docs</a>
+            <a href="../specs/auth.yaml">Raw spec</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Order API</h2>
+          <div class="links">
+            <a href="order.html">View docs</a>
+            <a href="../specs/order.yaml">Raw spec</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Payment API</h2>
+          <div class="links">
+            <a href="payment.html">View docs</a>
+            <a href="../specs/payment.yaml">Raw spec</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Delivery API</h2>
+          <div class="links">
+            <a href="delivery.html">View docs</a>
+            <a href="../specs/delivery.yaml">Raw spec</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Restaurant API</h2>
+          <div class="links">
+            <a href="restaurant.html">View docs</a>
+            <a href="../specs/restaurant.yaml">Raw spec</a>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
