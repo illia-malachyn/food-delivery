@@ -1,8 +1,9 @@
-.PHONY: migrate-up-all migrate-down-all migrate-version-all migrate-create-all migrate-up migrate-down migrate-version migrate-create regen-mocks
+.PHONY: migrate-up-all migrate-down-all migrate-version-all migrate-create-all migrate-up migrate-down migrate-version migrate-create regen-mocks openapi-lint
 
 SERVICES := order payment delivery restaurant auth
 SERVICE ?=
 NAME ?=
+OPENAPI_SPECS := auth/openapi.yaml order/openapi.yaml payment/openapi.yaml delivery/openapi.yaml restaurant/openapi.yaml
 
 migrate-up-all:
 	@for svc in $(SERVICES); do \
@@ -44,3 +45,6 @@ regen-mocks:
 		echo "==> $$svc: regen-mocks"; \
 		$(MAKE) -C $$svc regen-mocks; \
 	done
+
+openapi-lint:
+	docker run --rm -v "$(PWD):/work" -w /work redocly/cli lint $(OPENAPI_SPECS)

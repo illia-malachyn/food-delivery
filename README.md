@@ -130,6 +130,12 @@ docker run --rm -p 8088:8080 \
 
 Use `-v "$(pwd)/order:/spec"` (or another service directory) to preview a different API spec.
 
+Validate all specs:
+
+```bash
+make openapi-lint
+```
+
 ## Migrations
 
 The project has:
