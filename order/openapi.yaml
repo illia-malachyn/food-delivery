@@ -1,0 +1,104 @@
+openapi: 3.0.3
+info:
+  title: Order Service API
+  version: 1.0.0
+  license:
+    name: Proprietary
+  description: Order creation and state transition endpoints.
+servers:
+  - url: http://localhost:9876
+security: []
+paths:
+  /orders:
+    post:
+      tags: [Orders]
+      summary: Create order
+      operationId: createOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '200':
+          description: Order accepted
+        '400':
+          $ref: '#/components/responses/Error400Text'
+
+  /orders/{id}/confirm:
+    post:
+      tags: [Orders]
+      summary: Confirm order
+      operationId: confirmOrder
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Order confirmed
+        '400':
+          $ref: '#/components/responses/Error400Text'
+
+  /orders/{id}/cancel:
+    post:
+      tags: [Orders]
+      summary: Cancel order
+      operationId: cancelOrder
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelOrderRequest'
+      responses:
+        '200':
+          description: Order canceled
+        '400':
+          $ref: '#/components/responses/Error400Text'
+
+components:
+  parameters:
+    OrderId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Order identifier.
+      example: 4eaebf88-d08b-4f8f-bf65-0f9e3b6e3f66
+
+  responses:
+    Error400Text:
+      description: Bad request
+      content:
+        text/plain:
+          schema:
+            type: string
+
+  schemas:
+    CreateOrderRequest:
+      type: object
+      additionalProperties: false
+      required: [user_id, item_id, quantity]
+      properties:
+        user_id:
+          type: string
+          example: u-1
+        item_id:
+          type: string
+          example: pizza
+        quantity:
+          type: integer
+          minimum: 0
+          example: 2
+
+    CancelOrderRequest:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          example: payment failed

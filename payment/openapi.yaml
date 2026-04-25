@@ -1,0 +1,30 @@
+openapi: 3.0.3
+info:
+  title: Payment Service API
+  version: 1.0.0
+  license:
+    name: Proprietary
+  description: Current payment service stub endpoints.
+servers:
+  - url: http://localhost:8080
+security: []
+paths:
+  /:
+    get:
+      tags: [System]
+      summary: Service hello endpoint
+      operationId: paymentHello
+      responses:
+        '200':
+          description: Service response
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: hello from payment service
+        '400':
+          description: Bad request
+          content:
+            text/plain:
+              schema:
+                type: string

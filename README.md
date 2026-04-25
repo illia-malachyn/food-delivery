@@ -179,6 +179,25 @@ curl http://localhost:8081/auth/me \
   -H "Authorization: Bearer <access-token>"
 ```
 
+## OpenAPI Specs
+
+OpenAPI 3.0 specs are available per service:
+
+- `auth/openapi.yaml`
+- `order/openapi.yaml`
+- `payment/openapi.yaml`
+- `delivery/openapi.yaml`
+- `restaurant/openapi.yaml`
+
+Quick Swagger UI preview for any spec:
+
+```bash
+docker run --rm -p 8088:8080 \
+  -e SWAGGER_JSON=/spec/openapi.yaml \
+  -v "$(pwd)/auth:/spec" \
+  swaggerapi/swagger-ui
+```
+
 ## Migrations
 
 The project has:
