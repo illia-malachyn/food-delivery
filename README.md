@@ -225,31 +225,66 @@ Note: these targets require the `migrate` CLI in your PATH.
 
 ## Next Learning Steps
 
-- add postgres +
-- add auth service +
-- add api gateway +
-- use rabbitmq for service to service communication and kafka for service to services.
-- use cloud secret manager
-- host app somewhere (gcp/aws)
-- impl event publisher (polling) with outbox table solving the dual-write problem +
-- add Debezium or self-written CDC
-- add message broker (kafka/rabbitmq) with auto-commit=false +
-- add dedup table
-- write upcaster for new versions of events +
-- add orchestrating saga with temporal/cadence or self-written
-- choreography saga with distributed tracing
-- idempotent consumers
-- use cqrs in some service
-- use clean-arch's Presenters in some service
-- add CI +
-- add CD
-- add k8s and deploy to different geo zones
-- monitoring/observability +
-- use some load balancer
-- scale out microservices
-- add private VPC for a system
-- ? add minVersion to cqrs commands to fix the read-your-writes problem
-- ? build ACL in some service
-- ? use event sourcing? (I want to see how Reconstitute() func work)
-- competing consumers
-- performance tuning for consumers (prefetch messages, parallel processing, batch writes to db, compression, connection pool, lock timeout)
+Legend: `+` done, `~` partially done, no marker = todo. `?` = considering.
+
+### Foundations (done)
+
+- `+` PostgreSQL per service (logically separated DBs on shared instance)
+- `+` Auth service (JWT access + refresh, Redis sessions, middleware chain)
+- `+` API gateway (nginx path-routing)
+- `+` CI (GitHub Actions: tests + docker build)
+- `+` Observability baseline (Prometheus metrics, Grafana dashboards)
+
+### Eventing — producer side
+
+- `+` Outbox pattern with polling relay (solves dual-write)
+- `+` Kafka publisher with manual commits (`auto-commit=false`)
+- `~` Event versioning + upcasters (done for `OrderPlaced` only — generalize to all events)
+- CDC-based outbox publishing with Debezium (alternative to polling relay; compare trade-offs)
+
+### Eventing — consumer side (next focus)
+
+- Kafka consumer skeleton with manual commits, consumer groups, graceful shutdown
+- Idempotent consumers via dedup table (`message_id` PK, processed_at) — prerequisite for everything below
+- Dead-letter queue + retry policy with exponential backoff and jitter
+- Poison-message handling (parse failures, schema mismatches)
+- Competing consumers / consumer scaling (partition count, consumer group sizing)
+- Consumer performance tuning: prefetch / batch fetch, parallel processing per partition, batch DB writes, compression, connection pool sizing, lock timeouts
+
+### Cross-service workflows
+
+- Orchestration saga (Temporal or self-written state machine) — e.g. order → payment → restaurant → delivery with compensations
+- Choreography saga with distributed tracing (OpenTelemetry) — same flow, no central orchestrator
+- Decide RabbitMQ vs Kafka per use case: RPC-style commands (RabbitMQ) vs domain events (Kafka), and document the reasoning
+
+### Resilience
+
+- Circuit breaker on outbound HTTP calls (e.g. payment provider stub)
+- Retries with exponential backoff + jitter (consumer side and HTTP clients)
+- Timeouts and bulkheads on shared resources (DB pools, HTTP clients)
+
+### Architectural patterns (pick one or two services)
+
+- CQRS with separate read model (likely `restaurant` — heavy read, light write)
+- Clean-architecture Presenters in one service (compare to current handler-returns-DTO style)
+- `?` Event sourcing in one aggregate to see `Reconstitute()` in action
+- `?` Anti-corruption layer in a service that integrates with an external system
+- `?` `minVersion` on CQRS commands to fix read-your-writes consistency
+
+### Shared platform code
+
+- Extract `shared/` module: middleware chain, outbox relay, Kafka consumer base, integration-event interface, upcaster pattern
+- Replace counter-based domain ID generator with UUID/ULID (current impl breaks with >1 replica)
+
+### Deployment & infrastructure
+
+- Cloud secret manager (AWS Secrets Manager / SSM Parameter Store)
+- Host on AWS (start: single EC2 + docker-compose; target: ECS + RDS + SNS/SQS or MSK)
+- Private VPC with public/private subnet split
+- Load balancer (ALB) replacing nginx gateway, with TLS via ACM/Let's Encrypt
+- CD pipeline (GitHub Actions → ECR → ECS deploy)
+- Kubernetes deployment, eventually multi-region
+
+### Stretch
+
+- Scale out one service horizontally and observe partition rebalancing, sticky sessions, and cache invalidation behavior
