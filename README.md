@@ -144,6 +144,23 @@ Validate all specs:
 make openapi-lint
 ```
 
+## End-to-End Tests
+
+The repository has a deliberately small E2E suite for critical user/business flows only.
+
+Current E2E coverage:
+
+- Auth via gateway: register -> login -> me -> refresh -> logout
+- Order via gateway + DB assertions: create -> outbox OrderPlaced(v2) -> cancel -> outbox OrderCancelled
+
+Run:
+
+```bash
+make e2e
+```
+
+Details and environment overrides are documented in [`tests/e2e/README.md`](tests/e2e/README.md).
+
 ## Metrics
 
 Each microservice exposes Prometheus metrics on `/metrics`:

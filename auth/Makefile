@@ -1,4 +1,4 @@
-.PHONY: migrate-up migrate-down migrate-create migrate-force migrate-version regen-mocks
+.PHONY: migrate-up migrate-down migrate-create migrate-force migrate-version regen-mocks test test-integration
 
 # Load environment variables from .env file
 include .env
@@ -40,3 +40,9 @@ regen-mocks:
 		echo "==> mockery: $$dir"; \
 		go run github.com/vektra/mockery/v2@v2.53.5 --all --dir "$$dir" --output "$$dir/mocks" --outpkg mocks --with-expecter; \
 	done
+
+test:
+	go test ./...
+
+test-integration:
+	go test -tags=integration ./integration_tests -v

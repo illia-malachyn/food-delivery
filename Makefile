@@ -1,4 +1,4 @@
-.PHONY: migrate-up-all migrate-down-all migrate-version-all migrate-create-all migrate-up migrate-down migrate-version migrate-create regen-mocks openapi-lint
+.PHONY: migrate-up-all migrate-down-all migrate-version-all migrate-create-all migrate-up migrate-down migrate-version migrate-create regen-mocks openapi-lint e2e
 
 SERVICES := order payment delivery restaurant auth
 SERVICE ?=
@@ -48,3 +48,6 @@ regen-mocks:
 
 openapi-lint:
 	docker run --rm -v "$(PWD):/work" -w /work redocly/cli lint $(OPENAPI_SPECS)
+
+e2e:
+	go test -tags=e2e ./tests/e2e -v
