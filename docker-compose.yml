@@ -204,7 +204,6 @@ services:
       postgres:
         condition: service_healthy
     entrypoint: ["/usr/local/bin/migrate"]
-    restart: on-failure
 
 volumes:
   # Named volume for PostgreSQL data persistence

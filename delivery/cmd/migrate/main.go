@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -42,12 +43,12 @@ func main() {
 		log.Fatalf("Failed to create migrate instance: %v", err)
 	}
 
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		log.Fatalf("Migration failed: %v", err)
 	}
 
 	version, dirty, err := m.Version()
-	if err != nil && err != migrate.ErrNilVersion {
+	if err != nil && !errors.Is(err, migrate.ErrNilVersion) {
 		log.Fatalf("Failed to get migration version: %v", err)
 	}
 
