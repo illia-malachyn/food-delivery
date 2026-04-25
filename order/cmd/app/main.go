@@ -63,7 +63,7 @@ func main() {
 	mux.Handle("/orders/{id}/cancel", cancelOrderHandler)
 
 	server := &http.Server{
-		Addr:    ":9876",
+		Addr:    ":8080",
 		Handler: mux,
 	}
 

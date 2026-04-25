@@ -17,6 +17,6 @@ COPY --from=builder /bin/order-service /usr/local/bin/order-service
 COPY --from=builder /bin/migrate /usr/local/bin/migrate
 COPY --from=builder /src/database /app/database
 
-EXPOSE 9876
+EXPOSE 8080
 
 ENTRYPOINT ["/usr/local/bin/order-service"]

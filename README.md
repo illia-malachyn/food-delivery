@@ -23,7 +23,7 @@ Business rules by service:
 - `gateway`:
   - single host entrypoint on `localhost:8080`
   - routes `/auth/*` -> `auth:8080`
-  - routes `/orders*` -> `order:9876`
+  - routes `/orders*` -> `order:8080`
 - `order`:
   - HTTP API served behind gateway (`localhost:8080/orders`)
   - PostgreSQL persistence
@@ -109,90 +109,15 @@ docker compose down -v
 docker compose up --build -d
 ```
 
-## Order API
-
-Create order:
-
-```http
-POST /orders
-Content-Type: application/json
-```
-
-Example:
-
-```bash
-curl -X POST http://localhost:8080/orders \
-  -H "Content-Type: application/json" \
-  -d '{"user_id":"u-1","item_id":"pizza","quantity":2}'
-```
-
-Expected result: HTTP `200 OK` on success.
-
-Confirm order:
-
-```bash
-curl -X POST http://localhost:8080/orders/<order-id>/confirm
-```
-
-Cancel order:
-
-```bash
-curl -X POST http://localhost:8080/orders/<order-id>/cancel \
-  -H "Content-Type: application/json" \
-  -d '{"reason":"payment failed"}'
-```
-
-## Auth API
-
-Register:
-
-```bash
-curl -X POST http://localhost:8080/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"alice@example.com","password":"secret123"}' \
-  -c cookies.txt
-```
-
-Login:
-
-```bash
-curl -X POST http://localhost:8080/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"alice@example.com","password":"secret123"}' \
-  -c cookies.txt
-```
-
-Refresh token pair:
-
-```bash
-curl -X POST http://localhost:8080/auth/refresh \
-  -b cookies.txt \
-  -c cookies.txt
-```
-
-Logout (revoke refresh token):
-
-```bash
-curl -X POST http://localhost:8080/auth/logout \
-  -b cookies.txt
-```
-
-Read current auth principal:
-
-```bash
-curl http://localhost:8080/auth/me \
-  -H "Authorization: Bearer <access-token>"
-```
-
 ## OpenAPI Specs
 
 OpenAPI 3.0 specs are available per service:
 
-- `auth/openapi.yaml`
-- `order/openapi.yaml`
-- `payment/openapi.yaml`
-- `delivery/openapi.yaml`
-- `restaurant/openapi.yaml`
+- [`auth/openapi.yaml`](auth/openapi.yaml) (served via gateway at `http://localhost:8080/auth/*`)
+- [`order/openapi.yaml`](order/openapi.yaml) (served via gateway at `http://localhost:8080/orders*`)
+- [`payment/openapi.yaml`](payment/openapi.yaml) (internal service URL: `http://payment:8080`)
+- [`delivery/openapi.yaml`](delivery/openapi.yaml) (internal service URL: `http://delivery:8080`)
+- [`restaurant/openapi.yaml`](restaurant/openapi.yaml) (internal service URL: `http://restaurant:8080`)
 
 Quick Swagger UI preview for any spec:
 
@@ -202,6 +127,8 @@ docker run --rm -p 8088:8080 \
   -v "$(pwd)/auth:/spec" \
   swaggerapi/swagger-ui
 ```
+
+Use `-v "$(pwd)/order:/spec"` (or another service directory) to preview a different API spec.
 
 ## Migrations
 
@@ -241,6 +168,8 @@ Note: these targets require the `migrate` CLI in your PATH.
 ## Next Learning Steps
 
 - add postgres +
+- add auth service +
+- add api gateway +
 - use rabbitmq for service to service communication and kafka for service to services.
 - use cloud secret manager
 - host app somewhere (gcp/aws)
