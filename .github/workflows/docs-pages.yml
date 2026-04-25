@@ -34,6 +34,9 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
+        with:
+          token: ${{ secrets.PAGES_PAT != '' && secrets.PAGES_PAT || github.token }}
+          enablement: ${{ secrets.PAGES_PAT != '' }}
 
       - name: Build static site
         run: |
