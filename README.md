@@ -227,7 +227,7 @@ Note: these targets require the `migrate` CLI in your PATH.
 - add CI +
 - add CD
 - add k8s and deploy to different geo zones
-- monitoring/observability
+- monitoring/observability +
 - use some load balancer
 - scale out microservices
 - add private VPC for a system
