@@ -64,27 +64,10 @@ Requirements:
 - Docker
 - Docker Compose
 
-Root `.env` should contain DB bootstrap values (already present in this repo):
+Create root `.env` from the template:
 
 ```bash
-POSTGRES_ADMIN_USER=postgres
-POSTGRES_ADMIN_PASSWORD=postgres
-POSTGRES_ADMIN_DB=postgres
-ORDER_DB_NAME=orders
-ORDER_DB_USER=orders_user
-ORDER_DB_PASSWORD=orders_password
-PAYMENT_DB_NAME=payments
-PAYMENT_DB_USER=payments_user
-PAYMENT_DB_PASSWORD=payments_password
-DELIVERY_DB_NAME=deliveries
-DELIVERY_DB_USER=deliveries_user
-DELIVERY_DB_PASSWORD=deliveries_password
-RESTAURANT_DB_NAME=restaurants
-RESTAURANT_DB_USER=restaurants_user
-RESTAURANT_DB_PASSWORD=restaurants_password
-AUTH_DB_NAME=auth
-AUTH_DB_USER=auth_user
-AUTH_DB_PASSWORD=auth_password
+make env-init
 ```
 
 Start everything:
@@ -119,26 +102,19 @@ docker compose up --build -d
 
 ## OpenAPI Specs
 
-OpenAPI 3.0 specs are available per service:
-
-- [`auth/openapi.yaml`](auth/openapi.yaml) (served via gateway at `http://localhost:8080/auth/*`)
-- [`order/openapi.yaml`](order/openapi.yaml) (served via gateway at `http://localhost:8080/orders*`)
-- [`payment/openapi.yaml`](payment/openapi.yaml) (internal service URL: `http://payment:8080`)
-- [`delivery/openapi.yaml`](delivery/openapi.yaml) (internal service URL: `http://delivery:8080`)
-- [`restaurant/openapi.yaml`](restaurant/openapi.yaml) (internal service URL: `http://restaurant:8080`)
-
 Visual API docs are published with Redoc via GitHub Pages:
 
-- index: `https://<owner>.github.io/<repo>/`
+- site: <https://illia-malachyn.github.io/food-delivery/>
 - per service:
-  - `https://<owner>.github.io/<repo>/api/auth.html`
-  - `https://<owner>.github.io/<repo>/api/order.html`
-  - `https://<owner>.github.io/<repo>/api/payment.html`
-  - `https://<owner>.github.io/<repo>/api/delivery.html`
-  - `https://<owner>.github.io/<repo>/api/restaurant.html`
+  - <https://illia-malachyn.github.io/food-delivery/api/auth.html>
+  - <https://illia-malachyn.github.io/food-delivery/api/order.html>
+  - <https://illia-malachyn.github.io/food-delivery/api/payment.html>
+  - <https://illia-malachyn.github.io/food-delivery/api/delivery.html>
+  - <https://illia-malachyn.github.io/food-delivery/api/restaurant.html>
 
 Deployment workflow: [`.github/workflows/docs-pages.yml`](.github/workflows/docs-pages.yml).
-In repository settings, set Pages source to `GitHub Actions` once; after that, pushes to `main` that change OpenAPI specs or `docs/api/**` redeploy docs automatically.
+If you fork this repo, replace `illia-malachyn/food-delivery` with your own `<owner>/<repo>` in those URLs.
+In repository settings, set Pages source to `GitHub Actions` once; after that, pushes to `main` that change OpenAPI specs, `docs/index.html`, or `docs/api/**` redeploy docs automatically.
 
 Quick Swagger UI preview for any spec:
 

@@ -1,9 +1,31 @@
-.PHONY: migrate-up-all migrate-down-all migrate-version-all migrate-create-all migrate-up migrate-down migrate-version migrate-create regen-mocks openapi-lint e2e
+.PHONY: env-init migrate-up-all migrate-down-all migrate-version-all migrate-create-all migrate-up migrate-down migrate-version migrate-create regen-mocks openapi-lint e2e
 
 SERVICES := order payment delivery restaurant auth
 SERVICE ?=
 NAME ?=
 OPENAPI_SPECS := auth/openapi.yaml order/openapi.yaml payment/openapi.yaml delivery/openapi.yaml restaurant/openapi.yaml
+
+env-init:
+	@for pair in \
+		".env.example:.env" \
+		"order/.env.example:order/.env" \
+		"payment/.env.example:payment/.env" \
+		"delivery/.env.example:delivery/.env" \
+		"restaurant/.env.example:restaurant/.env" \
+		"auth/.env.example:auth/.env"; do \
+		src="$${pair%%:*}"; \
+		dst="$${pair##*:}"; \
+		if [ ! -f "$$src" ]; then \
+			echo "Missing template: $$src"; \
+			exit 1; \
+		fi; \
+		if [ -f "$$dst" ]; then \
+			echo "exists: $$dst"; \
+		else \
+			cp "$$src" "$$dst"; \
+			echo "created: $$dst"; \
+		fi; \
+	done
 
 migrate-up-all:
 	@for svc in $(SERVICES); do \
