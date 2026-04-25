@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/illia-malachyn/food-delivery/order/application"
 	mockapp "github.com/illia-malachyn/food-delivery/order/application/mocks"
 	"github.com/illia-malachyn/food-delivery/order/domain"
@@ -61,12 +62,14 @@ func TestOrderServiceCreate_UsesExpecterMocks(t *testing.T) {
 		Return(nil).
 		Once()
 
-	err := service.Create(context.Background(), &application.OrderDTO{
+	orderID, err := service.Create(context.Background(), &application.OrderDTO{
 		UserId:   "user-1",
 		ItemId:   "item-1",
 		Quantity: 2,
 	})
 	require.NoError(t, err)
+	_, parseErr := uuid.Parse(orderID)
+	require.NoError(t, parseErr)
 }
 
 func TestOrderServiceConfirm_DoesNotPublishIntegrationEvents(t *testing.T) {

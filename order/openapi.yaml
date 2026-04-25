@@ -23,6 +23,10 @@ paths:
       responses:
         '200':
           description: Order accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrderResponse'
         '400':
           $ref: '#/components/responses/Error400Text'
 
@@ -93,6 +97,16 @@ components:
           type: integer
           minimum: 0
           example: 2
+
+    CreateOrderResponse:
+      type: object
+      additionalProperties: false
+      required: [id]
+      properties:
+        id:
+          type: string
+          description: Created order identifier.
+          example: 4eaebf88-d08b-4f8f-bf65-0f9e3b6e3f66
 
     CancelOrderRequest:
       type: object

@@ -3,6 +3,7 @@ package domain_test
 import (
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/illia-malachyn/food-delivery/order/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -68,6 +69,22 @@ func TestNewOrder_NormalizesIDs(t *testing.T) {
 
 	assert.Equal(t, "user-1", order.UserID())
 	assert.Equal(t, "item-1", order.ItemID())
+}
+
+func TestNewOrder_GeneratesUUID(t *testing.T) {
+	t.Parallel()
+
+	first, err := domain.NewOrder("user-1", "item-1", 1)
+	require.NoError(t, err)
+	second, err := domain.NewOrder("user-1", "item-1", 1)
+	require.NoError(t, err)
+
+	_, parseFirstErr := uuid.Parse(first.ID())
+	_, parseSecondErr := uuid.Parse(second.ID())
+
+	require.NoError(t, parseFirstErr)
+	require.NoError(t, parseSecondErr)
+	assert.NotEqual(t, first.ID(), second.ID())
 }
 
 func TestOrderPlace_RejectsDuplicatePlace(t *testing.T) {

@@ -19,24 +19,28 @@ func NewOrderService(repository OrderRepository, eventUpcaster EventUpcaster) *O
 	}
 }
 
-func (s *OrderService) Create(ctx context.Context, orderDTO *OrderDTO) error {
+func (s *OrderService) Create(ctx context.Context, orderDTO *OrderDTO) (string, error) {
 	if orderDTO == nil {
-		return fmt.Errorf("orderDTO is required")
+		return "", fmt.Errorf("orderDTO is required")
 	}
 
 	order, err := domain.NewOrder(orderDTO.UserId, orderDTO.ItemId, orderDTO.Quantity)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if err = order.Place(); err != nil {
-		return err
+		return "", err
 	}
 
 	integrationEvents := mapToIntegrationEvents(order.FlushEvents())
 	upcastedEvents := s.eventUpcaster.Upcast(integrationEvents)
 
-	return s.orderRepository.SaveOrder(ctx, order, upcastedEvents)
+	if err = s.orderRepository.SaveOrder(ctx, order, upcastedEvents); err != nil {
+		return "", err
+	}
+
+	return order.ID(), nil
 }
 
 func (s *OrderService) Confirm(ctx context.Context, orderID string) error {

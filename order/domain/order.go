@@ -2,12 +2,11 @@ package domain
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 	"time"
-)
 
-var counter int = 0
+	"github.com/google/uuid"
+)
 
 var ErrValidationFailed = errors.New("validation failed")
 var ErrInvalidStateTransition = errors.New("invalid state transition")
@@ -50,9 +49,8 @@ func NewOrder(userId string, itemId string, quantity uint) (*Order, error) {
 		return nil, ErrValidationFailed
 	}
 
-	counter = counter + 1
 	return &Order{
-		id:       fmt.Sprintf("id-%d", counter),
+		id:       uuid.NewString(),
 		userId:   normalizedUserID,
 		itemID:   normalizedItemID,
 		quantity: quantity,
