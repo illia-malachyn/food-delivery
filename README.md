@@ -10,7 +10,12 @@ Educational Go project for practicing Event-Driven Architecture (EDA) and Domain
 - `restaurant`
 
 Detailed domain/event modeling notes are in [`docs/architecture.md`](docs/architecture.md).
-Order-specific rules are in [`docs/order-business-rules.md`](docs/order-business-rules.md).
+Business rules by service:
+
+- [`docs/order-business-rules.md`](docs/order-business-rules.md)
+- [`docs/payment-business-rules.md`](docs/payment-business-rules.md)
+- [`docs/restaurant-business-rules.md`](docs/restaurant-business-rules.md)
+- [`docs/delivery-business-rules.md`](docs/delivery-business-rules.md)
 
 ## Current Runtime Status
 
