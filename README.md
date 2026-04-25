@@ -159,26 +159,29 @@ Note: these targets require the `migrate` CLI in your PATH.
 ## Next Learning Steps
 
 - add postgres +
-- add cloud secret manager
+- use rabbitmq for service to service communication and kafka for service to services.
+- use cloud secret manager
 - host app somewhere (gcp/aws)
 - impl event publisher (polling) with outbox table solving the dual-write problem +
 - add Debezium or self-written CDC
 - add message broker (kafka/rabbitmq) with auto-commit=false +
 - add dedup table
 - write upcaster for new versions of events +
-- add orchestrating saga with temporal or self-written
-- add choreography saga
-- add idempotent consumers
+- add orchestrating saga with temporal/cadence or self-written
+- choreography saga with distributed tracing
+- idempotent consumers
 - use cqrs in some service
-- use clean-arch in one service (with Presenters)
+- use clean-arch's Presenters in some service
 - add CI +
 - add CD
-- add k8s
-- add auth (auth or api gateway) with access and refresh tokens
-- add monitoring
-- add load balancer
-- scale microservices horizontally
+- add k8s and deploy to different geo zones
+- add auth service (or api gateway) (with JWT)
+- monitoring/observability
+- use some load balancer
+- scale out microservices
 - add private VPC for a system
 - ? add minVersion to cqrs commands to fix the read-your-writes problem
-- build ACL in some service
+- ? build ACL in some service
 - ? use event sourcing? (I want to see how Reconstitute() func work)
+- competing consumers
+- performance tuning for consumers (prefetch messages, parallel processing, batch writes to db, compression, connection pool, lock timeout)
