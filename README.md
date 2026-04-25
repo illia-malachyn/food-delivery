@@ -27,6 +27,9 @@ Business rules by service:
 - `prometheus`:
   - metrics UI and query API on `localhost:9090`
   - scrapes `auth`, `order`, `payment`, `delivery`, `restaurant` on `/metrics`
+- `grafana`:
+  - dashboards UI on `localhost:3000` (default creds: `admin` / `admin`)
+  - provisioned Prometheus datasource + preloaded dashboard
 - `order`:
   - HTTP API served behind gateway (`localhost:8080/orders`)
   - PostgreSQL persistence
@@ -94,6 +97,7 @@ Compose starts:
 
 - `gateway` (`localhost:8080`)
 - `prometheus` (`localhost:9090`)
+- `grafana` (`localhost:3000`)
 - `postgres` (`localhost:5432`)
 - `redis` (`localhost:6379`)
 - `kafka` (`localhost:9092`)
@@ -154,6 +158,18 @@ Prometheus is configured via [`observability/prometheus.yml`](observability/prom
 Custom endpoint request counter in every service:
 
 - `http_requests_total{service,method,path,status}`
+
+Grafana provisioning files:
+
+- datasource: [`observability/grafana/provisioning/datasources/datasource.yml`](observability/grafana/provisioning/datasources/datasource.yml)
+- dashboard provider: [`observability/grafana/provisioning/dashboards/dashboards.yml`](observability/grafana/provisioning/dashboards/dashboards.yml)
+- dashboard JSON: [`observability/grafana/dashboards/food-delivery-overview.json`](observability/grafana/dashboards/food-delivery-overview.json)
+
+Grafana access:
+
+- URL: `http://localhost:3000`
+- credentials: `admin` / `admin`
+- preloaded dashboard: `Food Delivery Overview`
 
 ## Migrations
 
