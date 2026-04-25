@@ -67,85 +67,7 @@ jobs:
           go-version-file: go.mod
 
       - name: Prepare env files for compose
-        run: |
-          cat > .env <<'EOF'
-          POSTGRES_ADMIN_USER=postgres
-          POSTGRES_ADMIN_PASSWORD=postgres
-          POSTGRES_ADMIN_DB=postgres
-          ORDER_DB_NAME=orders
-          ORDER_DB_USER=orders_user
-          ORDER_DB_PASSWORD=orders_password
-          PAYMENT_DB_NAME=payments
-          PAYMENT_DB_USER=payments_user
-          PAYMENT_DB_PASSWORD=payments_password
-          DELIVERY_DB_NAME=deliveries
-          DELIVERY_DB_USER=deliveries_user
-          DELIVERY_DB_PASSWORD=deliveries_password
-          RESTAURANT_DB_NAME=restaurants
-          RESTAURANT_DB_USER=restaurants_user
-          RESTAURANT_DB_PASSWORD=restaurants_password
-          AUTH_DB_NAME=auth
-          AUTH_DB_USER=auth_user
-          AUTH_DB_PASSWORD=auth_password
-          EOF
-
-          cat > order/.env <<'EOF'
-          DB_NAME=orders
-          DB_USER=orders_user
-          DB_PASSWORD=orders_password
-          DB_HOST=localhost
-          DB_PORT=5432
-          DB_SSL_MODE=disable
-          KAFKA_BROKERS=localhost:9092
-          KAFKA_TOPIC_ORDER_EVENTS=order.events
-          OUTBOX_POLL_INTERVAL=2s
-          OUTBOX_BATCH_SIZE=100
-          EOF
-
-          cat > payment/.env <<'EOF'
-          DB_NAME=payments
-          DB_USER=payments_user
-          DB_PASSWORD=payments_password
-          DB_HOST=localhost
-          DB_PORT=5432
-          DB_SSL_MODE=disable
-          EOF
-
-          cat > delivery/.env <<'EOF'
-          DB_NAME=deliveries
-          DB_USER=deliveries_user
-          DB_PASSWORD=deliveries_password
-          DB_HOST=localhost
-          DB_PORT=5432
-          DB_SSL_MODE=disable
-          EOF
-
-          cat > restaurant/.env <<'EOF'
-          DB_NAME=restaurants
-          DB_USER=restaurants_user
-          DB_PASSWORD=restaurants_password
-          DB_HOST=localhost
-          DB_PORT=5432
-          DB_SSL_MODE=disable
-          EOF
-
-          cat > auth/.env <<'EOF'
-          DB_NAME=auth
-          DB_USER=auth_user
-          DB_PASSWORD=auth_password
-          DB_HOST=localhost
-          DB_PORT=5432
-          DB_SSL_MODE=disable
-          HTTP_PORT=8080
-          JWT_ISSUER=food-delivery-auth
-          JWT_ACCESS_SECRET=ci-access-secret
-          JWT_REFRESH_SECRET=ci-refresh-secret
-          JWT_ACCESS_TTL=15m
-          JWT_REFRESH_TTL=168h
-          REDIS_ADDR=localhost:6379
-          REDIS_PASSWORD=
-          REDIS_DB=0
-          EOF
+        run: make env-init
 
       - name: Start stack
         run: docker compose up --build -d
@@ -155,8 +77,8 @@ jobs:
 
       - name: Compose logs on failure
         if: failure()
-        run: docker compose logs --no-color
+        run: docker compose logs --no-color || true
 
       - name: Stop stack
         if: always()
-        run: docker compose down -v
+        run: docker compose down -v || true

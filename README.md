@@ -112,10 +112,6 @@ Visual API docs are published with Redoc via GitHub Pages:
   - <https://illia-malachyn.github.io/food-delivery/api/delivery.html>
   - <https://illia-malachyn.github.io/food-delivery/api/restaurant.html>
 
-Deployment workflow: [`.github/workflows/docs-pages.yml`](.github/workflows/docs-pages.yml).
-If you fork this repo, replace `illia-malachyn/food-delivery` with your own `<owner>/<repo>` in those URLs.
-In repository settings, set Pages source to `GitHub Actions` once; after that, pushes to `main` that change OpenAPI specs, `docs/index.html`, or `docs/api/**` redeploy docs automatically.
-
 Quick Swagger UI preview for any spec:
 
 ```bash
