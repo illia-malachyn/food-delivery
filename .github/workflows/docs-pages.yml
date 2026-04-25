@@ -50,6 +50,21 @@ jobs:
           cp delivery/openapi.yaml _site/specs/delivery.yaml
           cp restaurant/openapi.yaml _site/specs/restaurant.yaml
           cp docs/index.html _site/index.html
+          for svc in auth order payment delivery restaurant; do
+            cat > "_site/${svc}.html" <<EOF
+          <!doctype html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8" />
+              <meta http-equiv="refresh" content="0; url=./api/${svc}.html" />
+              <title>Redirecting...</title>
+            </head>
+            <body>
+              <a href="./api/${svc}.html">Open ${svc} API docs</a>
+            </body>
+          </html>
+          EOF
+          done
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
