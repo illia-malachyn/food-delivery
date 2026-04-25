@@ -10,6 +10,7 @@ on:
       - "payment/openapi.yaml"
       - "delivery/openapi.yaml"
       - "restaurant/openapi.yaml"
+      - "docs/index.html"
       - "docs/api/**"
       - ".github/workflows/docs-pages.yml"
 
