@@ -24,6 +24,18 @@ services:
       - ./payment/docker/postgres/init/02-init-payment-db.sh:/docker-entrypoint-initdb.d/02-init-payment-db.sh
       - ./delivery/docker/postgres/init/03-init-delivery-db.sh:/docker-entrypoint-initdb.d/03-init-delivery-db.sh
       - ./restaurant/docker/postgres/init/04-init-restaurant-db.sh:/docker-entrypoint-initdb.d/04-init-restaurant-db.sh
+      - ./auth/docker/postgres/init/05-init-auth-db.sh:/docker-entrypoint-initdb.d/05-init-auth-db.sh
+
+  redis:
+    image: redis:8.4-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   kafka:
     image: apache/kafka:latest
@@ -150,6 +162,41 @@ services:
     container_name: restaurant-migrate
     env_file:
       - ./restaurant/.env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["/usr/local/bin/migrate"]
+    restart: on-failure
+
+  auth:
+    build:
+      context: ./auth
+      dockerfile: Dockerfile
+    container_name: auth
+    env_file:
+      - ./auth/.env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_ADDR: redis:6379
+    ports:
+      - "8081:8080"
+    depends_on:
+      auth-migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  auth-migrate:
+    build:
+      context: ./auth
+      dockerfile: Dockerfile
+    container_name: auth-migrate
+    env_file:
+      - ./auth/.env
     environment:
       DB_HOST: postgres
       DB_PORT: 5432

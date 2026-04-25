@@ -1,6 +1,6 @@
 .PHONY: migrate-up-all migrate-down-all migrate-version-all migrate-create-all migrate-up migrate-down migrate-version migrate-create regen-mocks
 
-SERVICES := order payment delivery restaurant
+SERVICES := order payment delivery restaurant auth
 SERVICE ?=
 NAME ?=
 

@@ -8,6 +8,7 @@ Educational Go project for practicing Event-Driven Architecture (EDA) and Domain
 - `payment`
 - `delivery`
 - `restaurant`
+- `auth`
 
 Detailed domain/event modeling notes are in [`docs/architecture.md`](docs/architecture.md).
 Business rules by service:
@@ -27,6 +28,11 @@ Business rules by service:
   - basic HTTP app stubs running on `:8080` inside containers
   - PostgreSQL migrations are wired
   - no host port published in `docker-compose.yml` yet
+- `auth`:
+  - HTTP API on `localhost:8081`
+  - PostgreSQL users table + Redis-backed refresh-token sessions
+  - JWT access token in JSON response + refresh token in HttpOnly cookie
+  - middleware chain infra (`recovery`, `logging`, `tracing`, `metrics`, `auth`)
 
 ## Project Layout
 
@@ -36,6 +42,7 @@ food-delivery/
   payment/
   delivery/
   restaurant/
+  auth/
   docs/
   docker-compose.yml
 ```
@@ -65,6 +72,9 @@ DELIVERY_DB_PASSWORD=deliveries_password
 RESTAURANT_DB_NAME=restaurants
 RESTAURANT_DB_USER=restaurants_user
 RESTAURANT_DB_PASSWORD=restaurants_password
+AUTH_DB_NAME=auth
+AUTH_DB_USER=auth_user
+AUTH_DB_PASSWORD=auth_password
 ```
 
 Start everything:
@@ -76,9 +86,10 @@ docker compose up --build -d
 Compose starts:
 
 - `postgres` (`localhost:5432`)
+- `redis` (`localhost:6379`)
 - `kafka` (`localhost:9092`)
 - one migration job per service (`*-migrate`)
-- application containers: `order`, `payment`, `delivery`, `restaurant`
+- application containers: `order`, `payment`, `delivery`, `restaurant`, `auth`
 
 Stop:
 
@@ -124,6 +135,48 @@ Cancel order:
 curl -X POST http://localhost:9876/orders/<order-id>/cancel \
   -H "Content-Type: application/json" \
   -d '{"reason":"payment failed"}'
+```
+
+## Auth API
+
+Register:
+
+```bash
+curl -X POST http://localhost:8081/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"alice@example.com","password":"secret123"}' \
+  -c cookies.txt
+```
+
+Login:
+
+```bash
+curl -X POST http://localhost:8081/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"alice@example.com","password":"secret123"}' \
+  -c cookies.txt
+```
+
+Refresh token pair:
+
+```bash
+curl -X POST http://localhost:8081/auth/refresh \
+  -b cookies.txt \
+  -c cookies.txt
+```
+
+Logout (revoke refresh token):
+
+```bash
+curl -X POST http://localhost:8081/auth/logout \
+  -b cookies.txt
+```
+
+Read current auth principal:
+
+```bash
+curl http://localhost:8081/auth/me \
+  -H "Authorization: Bearer <access-token>"
 ```
 
 ## Migrations
@@ -180,7 +233,6 @@ Note: these targets require the `migrate` CLI in your PATH.
 - add CI +
 - add CD
 - add k8s and deploy to different geo zones
-- add auth service (or api gateway) (with JWT)
 - monitoring/observability
 - use some load balancer
 - scale out microservices
