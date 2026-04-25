@@ -48,7 +48,7 @@ jobs:
           cp payment/openapi.yaml _site/specs/payment.yaml
           cp delivery/openapi.yaml _site/specs/delivery.yaml
           cp restaurant/openapi.yaml _site/specs/restaurant.yaml
-          cp docs/api/index.html _site/index.html
+          cp docs/index.html _site/index.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
