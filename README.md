@@ -24,6 +24,9 @@ Business rules by service:
   - single host entrypoint on `localhost:8080`
   - routes `/auth/*` -> `auth:8080`
   - routes `/orders*` -> `order:8080`
+- `prometheus`:
+  - metrics UI and query API on `localhost:9090`
+  - scrapes `auth`, `order`, `payment`, `delivery`, `restaurant` on `/metrics`
 - `order`:
   - HTTP API served behind gateway (`localhost:8080/orders`)
   - PostgreSQL persistence
@@ -90,6 +93,7 @@ docker compose up --build -d
 Compose starts:
 
 - `gateway` (`localhost:8080`)
+- `prometheus` (`localhost:9090`)
 - `postgres` (`localhost:5432`)
 - `redis` (`localhost:6379`)
 - `kafka` (`localhost:9092`)
@@ -135,6 +139,21 @@ Validate all specs:
 ```bash
 make openapi-lint
 ```
+
+## Metrics
+
+Each microservice exposes Prometheus metrics on `/metrics`:
+
+- `auth:8080/metrics`
+- `order:8080/metrics`
+- `payment:8080/metrics`
+- `delivery:8080/metrics`
+- `restaurant:8080/metrics`
+
+Prometheus is configured via [`observability/prometheus.yml`](observability/prometheus.yml) and available on `http://localhost:9090`.
+Custom endpoint request counter in every service:
+
+- `http_requests_total{service,method,path,status}`
 
 ## Migrations
 

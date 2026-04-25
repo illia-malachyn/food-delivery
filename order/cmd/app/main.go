@@ -53,18 +53,11 @@ func main() {
 	postgresOrderRepository := persistence.NewPostgresOrderRepository(connPool)
 	eventUpcaster := application.NewIntegrationEventUpcaster()
 	orderService := application.NewOrderService(postgresOrderRepository, eventUpcaster)
-	orderHandler := httpinfra.CreateOrderHandler(orderService)
-	confirmOrderHandler := httpinfra.ConfirmOrderHandler(orderService)
-	cancelOrderHandler := httpinfra.CancelOrderHandler(orderService)
-
-	mux := http.NewServeMux()
-	mux.Handle("/orders", orderHandler)
-	mux.Handle("/orders/{id}/confirm", confirmOrderHandler)
-	mux.Handle("/orders/{id}/cancel", cancelOrderHandler)
+	router := httpinfra.NewRouter(orderService)
 
 	server := &http.Server{
 		Addr:    ":8080",
-		Handler: mux,
+		Handler: router,
 	}
 
 	go func() {

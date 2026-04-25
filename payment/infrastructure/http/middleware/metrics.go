@@ -8,50 +8,44 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var authHTTPRequestsTotal = prometheus.NewCounterVec(
+var httpRequestsTotal = prometheus.NewCounterVec(
 	prometheus.CounterOpts{
 		Name: "http_requests_total",
-		Help: "Total number of HTTP requests handled by the auth service.",
+		Help: "Total number of HTTP requests handled by the payment service.",
 	},
 	[]string{"service", "method", "path", "status"},
 )
 
 func init() {
-	prometheus.MustRegister(authHTTPRequestsTotal)
+	prometheus.MustRegister(httpRequestsTotal)
 }
 
-// Tracing is a placeholder middleware hook for future distributed tracing instrumentation.
-func Tracing() Middleware {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
-func Metrics() Middleware {
+func Metrics(service string) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 			next.ServeHTTP(rec, r)
 
-			path := r.Pattern
-			if path == "" {
-				path = r.URL.Path
-			}
-			if strings.Contains(path, " ") {
-				parts := strings.SplitN(path, " ", 2)
-				path = parts[1]
-			}
-
-			authHTTPRequestsTotal.WithLabelValues(
-				"auth",
+			httpRequestsTotal.WithLabelValues(
+				service,
 				r.Method,
-				path,
+				normalizePath(r),
 				strconv.Itoa(rec.status),
 			).Inc()
 		})
 	}
+}
+
+func normalizePath(r *http.Request) string {
+	path := r.Pattern
+	if path == "" {
+		path = r.URL.Path
+	}
+	if strings.Contains(path, " ") {
+		parts := strings.SplitN(path, " ", 2)
+		path = parts[1]
+	}
+	return path
 }
 
 type statusRecorder struct {

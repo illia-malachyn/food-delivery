@@ -3,17 +3,14 @@ package main
 import (
 	"log"
 	"net/http"
+
+	httpinfra "github.com/illia-malachyn/food-delivery/delivery/infrastructure/http"
 )
 
 func main() {
 	log.Println("delivery microservice started")
 
-	http.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("hello from delivery service"))
-	})
-
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	if err := http.ListenAndServe(":8080", httpinfra.NewRouter()); err != nil {
 		log.Fatalf("delivery server stopped: %v", err)
 	}
 }

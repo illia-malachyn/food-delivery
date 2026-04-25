@@ -5,12 +5,14 @@ import (
 
 	"github.com/illia-malachyn/food-delivery/auth/internal/httpapi/middleware"
 	"github.com/illia-malachyn/food-delivery/auth/internal/security"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func NewRouter(handler *Handler, tokenManager security.TokenManager) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /healthz", handler.HandleHealth)
+	mux.Handle("GET /metrics", promhttp.Handler())
 	mux.HandleFunc("POST /auth/register", handler.HandleRegister)
 	mux.HandleFunc("POST /auth/login", handler.HandleLogin)
 	mux.HandleFunc("POST /auth/refresh", handler.HandleRefresh)

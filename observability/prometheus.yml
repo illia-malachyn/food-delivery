@@ -1,0 +1,33 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["prometheus:9090"]
+
+  - job_name: auth
+    static_configs:
+      - targets: ["auth:8080"]
+    metrics_path: /metrics
+
+  - job_name: order
+    static_configs:
+      - targets: ["order:8080"]
+    metrics_path: /metrics
+
+  - job_name: payment
+    static_configs:
+      - targets: ["payment:8080"]
+    metrics_path: /metrics
+
+  - job_name: delivery
+    static_configs:
+      - targets: ["delivery:8080"]
+    metrics_path: /metrics
+
+  - job_name: restaurant
+    static_configs:
+      - targets: ["restaurant:8080"]
+    metrics_path: /metrics
