@@ -1,0 +1,57 @@
+name: API Docs Pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - "auth/openapi.yaml"
+      - "order/openapi.yaml"
+      - "payment/openapi.yaml"
+      - "delivery/openapi.yaml"
+      - "restaurant/openapi.yaml"
+      - "docs/api/**"
+      - ".github/workflows/docs-pages.yml"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build static site
+        run: |
+          rm -rf _site
+          mkdir -p _site/api _site/specs
+          cp docs/api/*.html _site/api/
+          cp auth/openapi.yaml _site/specs/auth.yaml
+          cp order/openapi.yaml _site/specs/order.yaml
+          cp payment/openapi.yaml _site/specs/payment.yaml
+          cp delivery/openapi.yaml _site/specs/delivery.yaml
+          cp restaurant/openapi.yaml _site/specs/restaurant.yaml
+          cp docs/api/index.html _site/index.html
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
