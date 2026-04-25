@@ -20,8 +20,12 @@ Business rules by service:
 
 ## Current Runtime Status
 
+- `gateway`:
+  - single host entrypoint on `localhost:8080`
+  - routes `/auth/*` -> `auth:8080`
+  - routes `/orders*` -> `order:9876`
 - `order`:
-  - HTTP API: `POST /orders` on `localhost:9876`
+  - HTTP API served behind gateway (`localhost:8080/orders`)
   - PostgreSQL persistence
   - Outbox relay + Kafka publisher (`order.events` topic by default)
 - `payment`, `delivery`, `restaurant`:
@@ -29,7 +33,7 @@ Business rules by service:
   - PostgreSQL migrations are wired
   - no host port published in `docker-compose.yml` yet
 - `auth`:
-  - HTTP API on `localhost:8081`
+  - HTTP API served behind gateway (`localhost:8080/auth/*`)
   - PostgreSQL users table + Redis-backed refresh-token sessions
   - JWT access token in JSON response + refresh token in HttpOnly cookie
   - middleware chain infra (`recovery`, `logging`, `tracing`, `metrics`, `auth`)
@@ -85,6 +89,7 @@ docker compose up --build -d
 
 Compose starts:
 
+- `gateway` (`localhost:8080`)
 - `postgres` (`localhost:5432`)
 - `redis` (`localhost:6379`)
 - `kafka` (`localhost:9092`)
@@ -116,7 +121,7 @@ Content-Type: application/json
 Example:
 
 ```bash
-curl -X POST http://localhost:9876/orders \
+curl -X POST http://localhost:8080/orders \
   -H "Content-Type: application/json" \
   -d '{"user_id":"u-1","item_id":"pizza","quantity":2}'
 ```
@@ -126,13 +131,13 @@ Expected result: HTTP `200 OK` on success.
 Confirm order:
 
 ```bash
-curl -X POST http://localhost:9876/orders/<order-id>/confirm
+curl -X POST http://localhost:8080/orders/<order-id>/confirm
 ```
 
 Cancel order:
 
 ```bash
-curl -X POST http://localhost:9876/orders/<order-id>/cancel \
+curl -X POST http://localhost:8080/orders/<order-id>/cancel \
   -H "Content-Type: application/json" \
   -d '{"reason":"payment failed"}'
 ```
@@ -142,7 +147,7 @@ curl -X POST http://localhost:9876/orders/<order-id>/cancel \
 Register:
 
 ```bash
-curl -X POST http://localhost:8081/auth/register \
+curl -X POST http://localhost:8080/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"alice@example.com","password":"secret123"}' \
   -c cookies.txt
@@ -151,7 +156,7 @@ curl -X POST http://localhost:8081/auth/register \
 Login:
 
 ```bash
-curl -X POST http://localhost:8081/auth/login \
+curl -X POST http://localhost:8080/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"alice@example.com","password":"secret123"}' \
   -c cookies.txt
@@ -160,7 +165,7 @@ curl -X POST http://localhost:8081/auth/login \
 Refresh token pair:
 
 ```bash
-curl -X POST http://localhost:8081/auth/refresh \
+curl -X POST http://localhost:8080/auth/refresh \
   -b cookies.txt \
   -c cookies.txt
 ```
@@ -168,14 +173,14 @@ curl -X POST http://localhost:8081/auth/refresh \
 Logout (revoke refresh token):
 
 ```bash
-curl -X POST http://localhost:8081/auth/logout \
+curl -X POST http://localhost:8080/auth/logout \
   -b cookies.txt
 ```
 
 Read current auth principal:
 
 ```bash
-curl http://localhost:8081/auth/me \
+curl http://localhost:8080/auth/me \
   -H "Authorization: Bearer <access-token>"
 ```
 

@@ -6,7 +6,7 @@ info:
     name: Proprietary
   description: Current delivery service stub endpoints.
 servers:
-  - url: http://localhost:8080
+  - url: http://delivery:8080
 security: []
 paths:
   /:

@@ -6,7 +6,7 @@ info:
     name: Proprietary
   description: Current restaurant service stub endpoints.
 servers:
-  - url: http://localhost:8080
+  - url: http://restaurant:8080
 security: []
 paths:
   /:

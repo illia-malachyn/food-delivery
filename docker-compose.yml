@@ -88,8 +88,6 @@ services:
       DB_HOST: postgres
       DB_PORT: 5432
       KAFKA_BROKERS: kafka:9092
-    ports:
-      - "9876:9876"
     depends_on:
       order-migrate:
         condition: service_completed_successfully
@@ -182,13 +180,24 @@ services:
       DB_HOST: postgres
       DB_PORT: 5432
       REDIS_ADDR: redis:6379
-    ports:
-      - "8081:8080"
     depends_on:
       auth-migrate:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+
+  gateway:
+    image: nginx:1.27-alpine
+    container_name: gateway
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      auth:
+        condition: service_started
+      order:
+        condition: service_started
 
   auth-migrate:
     build:
