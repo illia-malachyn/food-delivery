@@ -88,6 +88,21 @@ func IntFromEnv(key string, fallback int) int {
 	return parsed
 }
 
+func FloatFromEnv(key string, fallback float64) float64 {
+	raw := os.Getenv(key)
+	if raw == "" {
+		return fallback
+	}
+
+	parsed, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		log.Printf("invalid float for %s=%q, using fallback %f", key, raw, fallback)
+		return fallback
+	}
+
+	return parsed
+}
+
 func JWTPublicKeyFromEnv(prefix string) string {
 	upperPrefix := strings.ToUpper(strings.TrimSpace(prefix))
 

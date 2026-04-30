@@ -46,7 +46,12 @@ func main() {
 	if paymentProviderURL := sharedconfig.GetOrDefault("PAYMENT_PROVIDER_URL", ""); paymentProviderURL != "" {
 		paymentProvider = provider.NewHTTPPaymentProvider(paymentProviderURL, &http.Client{
 			Transport: resilience.NewCircuitBreakerRoundTripper(
-				http.DefaultTransport,
+				resilience.NewRetryRoundTripper(http.DefaultTransport, resilience.RetryPolicy{
+					MaxAttempts:    sharedconfig.IntFromEnv("PAYMENT_PROVIDER_HTTP_RETRY_MAX_ATTEMPTS", 3),
+					InitialBackoff: sharedconfig.DurationFromEnv("PAYMENT_PROVIDER_HTTP_RETRY_INITIAL_BACKOFF", 100*time.Millisecond),
+					MaxBackoff:     sharedconfig.DurationFromEnv("PAYMENT_PROVIDER_HTTP_RETRY_MAX_BACKOFF", 2*time.Second),
+					Jitter:         sharedconfig.FloatFromEnv("PAYMENT_PROVIDER_HTTP_RETRY_JITTER", 0.2),
+				}),
 				resilience.NewCircuitBreaker(resilience.CircuitBreakerConfig{
 					FailureThreshold: sharedconfig.IntFromEnv("PAYMENT_PROVIDER_CIRCUIT_FAILURE_THRESHOLD", 5),
 					OpenTimeout:      sharedconfig.DurationFromEnv("PAYMENT_PROVIDER_CIRCUIT_OPEN_TIMEOUT", 30*time.Second),
@@ -67,6 +72,12 @@ func main() {
 		paymentRepository,
 		int64(sharedconfig.IntFromEnv("PAYMENT_DEFAULT_AMOUNT", 1000)),
 		sharedconfig.GetMany([]string{"PAYMENT_DEFAULT_CURRENCY"}, "USD"),
+		infrastructure.WithRetryPolicy(resilience.RetryPolicy{
+			MaxAttempts:    sharedconfig.IntFromEnv("PAYMENT_CONSUMER_RETRY_MAX_ATTEMPTS", 3),
+			InitialBackoff: sharedconfig.DurationFromEnv("PAYMENT_CONSUMER_RETRY_INITIAL_BACKOFF", 100*time.Millisecond),
+			MaxBackoff:     sharedconfig.DurationFromEnv("PAYMENT_CONSUMER_RETRY_MAX_BACKOFF", 2*time.Second),
+			Jitter:         sharedconfig.FloatFromEnv("PAYMENT_CONSUMER_RETRY_JITTER", 0.2),
+		}),
 	)
 	defer orderEventsConsumer.Close()
 

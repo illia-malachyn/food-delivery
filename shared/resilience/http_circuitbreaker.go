@@ -27,8 +27,8 @@ func NewCircuitBreakerRoundTripper(base http.RoundTripper, breaker *CircuitBreak
 			if roundTripErr != nil {
 				return roundTripErr
 			}
-			if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= http.StatusInternalServerError {
-				return errHTTPStatus{statusCode: resp.StatusCode}
+			if isRetryableHTTPStatus(resp.StatusCode) {
+				return HTTPStatusError{StatusCode: resp.StatusCode}
 			}
 			return nil
 		})
@@ -42,10 +42,10 @@ func NewCircuitBreakerRoundTripper(base http.RoundTripper, breaker *CircuitBreak
 	})
 }
 
-type errHTTPStatus struct {
-	statusCode int
+type HTTPStatusError struct {
+	StatusCode int
 }
 
-func (e errHTTPStatus) Error() string {
-	return http.StatusText(e.statusCode)
+func (e HTTPStatusError) Error() string {
+	return http.StatusText(e.StatusCode)
 }
