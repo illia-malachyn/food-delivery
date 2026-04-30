@@ -1,4 +1,4 @@
-.PHONY: env-init migrate-up-all migrate-down-all migrate-version-all migrate-create-all migrate-up migrate-down migrate-version migrate-create regen-mocks openapi-lint e2e
+.PHONY: env-init migrate-up-all migrate-down-all migrate-version-all migrate-create-all migrate-up migrate-down migrate-version migrate-create regen-mocks openapi-lint unit-tests integration-tests e2e-tests integration e2e
 
 SERVICES := order payment delivery restaurant auth
 SERVICE ?=
@@ -71,5 +71,39 @@ regen-mocks:
 openapi-lint:
 	docker run --rm -v "$(PWD):/work" -w /work redocly/cli lint $(OPENAPI_SPECS)
 
-e2e:
+unit-tests:
+	@if [ -n "$(SERVICE)" ]; then \
+		echo "==> $(SERVICE): unit-tests"; \
+		(cd $(SERVICE) && GOWORK=off go test ./...); \
+	else \
+		for svc in $(SERVICES); do \
+			echo "==> $$svc: unit-tests"; \
+			(cd $$svc && GOWORK=off go test ./...); \
+		done; \
+	fi
+
+e2e-tests:
 	go test -tags=e2e ./tests/e2e -v
+
+integration-tests:
+	@if [ -n "$(SERVICE)" ]; then \
+		if [ -d "$(SERVICE)/integration_tests" ]; then \
+			echo "==> $(SERVICE): integration-tests"; \
+			(cd $(SERVICE) && GOWORK=off go test -tags=integration ./integration_tests/... -v); \
+		else \
+			echo "==> $(SERVICE): no integration_tests/ folder, skipping"; \
+		fi; \
+	else \
+		for svc in $(SERVICES); do \
+			if [ -d "$$svc/integration_tests" ]; then \
+				echo "==> $$svc: integration-tests"; \
+				(cd $$svc && GOWORK=off go test -tags=integration ./integration_tests/... -v); \
+			else \
+				echo "==> $$svc: no integration_tests/ folder, skipping"; \
+			fi; \
+		done; \
+	fi
+
+e2e: e2e-tests
+
+integration: integration-tests
