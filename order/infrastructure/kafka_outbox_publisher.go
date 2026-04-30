@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/segmentio/kafka-go"
+
+	sharedkafka "github.com/illia-malachyn/food-delivery/shared/kafka"
 )
 
 // KafkaOutboxPublisher sends outbox events to Kafka.
@@ -15,22 +17,13 @@ type KafkaOutboxPublisher struct {
 }
 
 func NewKafkaOutboxPublisher(brokers []string, topic string) (*KafkaOutboxPublisher, error) {
-	if len(brokers) == 0 {
-		return nil, fmt.Errorf("kafka brokers are required")
-	}
-
-	if topic == "" {
-		return nil, fmt.Errorf("kafka topic is required")
+	writer, err := sharedkafka.NewWriter(brokers, topic)
+	if err != nil {
+		return nil, err
 	}
 
 	return &KafkaOutboxPublisher{
-		writer: &kafka.Writer{
-			Addr:         kafka.TCP(brokers...),
-			Topic:        topic,
-			RequiredAcks: kafka.RequireOne,
-			Balancer:     &kafka.Hash{},
-			BatchTimeout: 10 * time.Millisecond,
-		},
+		writer: writer,
 	}, nil
 }
 

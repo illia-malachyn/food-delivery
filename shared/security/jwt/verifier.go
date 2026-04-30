@@ -1,4 +1,4 @@
-package http
+package jwt
 
 import (
 	"crypto/rsa"
@@ -13,24 +13,24 @@ import (
 
 var ErrInvalidToken = errors.New("invalid token")
 
-type JWTVerifier struct {
+type Verifier struct {
 	publicKey *rsa.PublicKey
 	issuer    string
 }
 
-func NewJWTVerifier(publicKeyPEM string, issuer string) (*JWTVerifier, error) {
+func NewVerifier(publicKeyPEM string, issuer string) (*Verifier, error) {
 	publicKey, err := parseRSAPublicKeyPEM(publicKeyPEM)
 	if err != nil {
 		return nil, err
 	}
 
-	return &JWTVerifier{
+	return &Verifier{
 		publicKey: publicKey,
 		issuer:    strings.TrimSpace(issuer),
 	}, nil
 }
 
-func (v *JWTVerifier) VerifyAccessToken(token string) error {
+func (v *Verifier) VerifyAccessToken(token string) error {
 	claims := &jwt.RegisteredClaims{}
 	options := []jwt.ParserOption{jwt.WithValidMethods([]string{"RS256"})}
 	if v.issuer != "" {

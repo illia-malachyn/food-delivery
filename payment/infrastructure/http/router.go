@@ -6,10 +6,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/illia-malachyn/food-delivery/payment/application"
-	"github.com/illia-malachyn/food-delivery/payment/infrastructure/http/middleware"
+	sharedmiddleware "github.com/illia-malachyn/food-delivery/shared/http/middleware"
 )
 
-func NewRouter(paymentService *application.PaymentService, requireAuth middleware.Middleware) http.Handler {
+func NewRouter(paymentService *application.PaymentService, requireAuth sharedmiddleware.Middleware) http.Handler {
 	if requireAuth == nil {
 		requireAuth = func(next http.Handler) http.Handler { return next }
 	}
@@ -25,9 +25,9 @@ func NewRouter(paymentService *application.PaymentService, requireAuth middlewar
 	mux.Handle("POST /payments/{id}/fail", requireAuth(MarkFailedHandler(paymentService)))
 	mux.Handle("POST /payments/{id}/refund", requireAuth(RefundPaymentHandler(paymentService)))
 
-	return middleware.Chain(
+	return sharedmiddleware.Chain(
 		mux,
-		middleware.Logging(),
-		middleware.Metrics("payment"),
+		sharedmiddleware.Logging(),
+		sharedmiddleware.Metrics("payment"),
 	)
 }

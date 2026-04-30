@@ -10,7 +10,7 @@ import (
 
 	"github.com/illia-malachyn/food-delivery/payment/application"
 	"github.com/illia-malachyn/food-delivery/payment/domain"
-	"github.com/illia-malachyn/food-delivery/payment/infrastructure/http/middleware"
+	sharedmiddleware "github.com/illia-malachyn/food-delivery/shared/http/middleware"
 	"github.com/stretchr/testify/require"
 )
 
@@ -32,7 +32,7 @@ func TestRouter_ProtectedEndpointRequiresJWT(t *testing.T) {
 		},
 	})
 
-	router := NewRouter(service, middleware.RequireJWT(stubJWTVerifier{}))
+	router := NewRouter(service, sharedmiddleware.RequireJWT(stubJWTVerifier{}))
 
 	req := httptest.NewRequest(http.MethodPost, "/payments", strings.NewReader(`{"order_id":"order-1","amount":1200,"currency":"USD"}`))
 	rec := httptest.NewRecorder()
@@ -51,7 +51,7 @@ func TestRouter_PublicEndpointDoesNotRequireJWT(t *testing.T) {
 		},
 	})
 
-	router := NewRouter(service, middleware.RequireJWT(stubJWTVerifier{}))
+	router := NewRouter(service, sharedmiddleware.RequireJWT(stubJWTVerifier{}))
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()

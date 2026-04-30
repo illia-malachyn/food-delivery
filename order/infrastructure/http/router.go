@@ -6,10 +6,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/illia-malachyn/food-delivery/order/application"
-	"github.com/illia-malachyn/food-delivery/order/infrastructure/http/middleware"
+	sharedmiddleware "github.com/illia-malachyn/food-delivery/shared/http/middleware"
 )
 
-func NewRouter(orderService *application.OrderService, requireAuth middleware.Middleware) http.Handler {
+func NewRouter(orderService *application.OrderService, requireAuth sharedmiddleware.Middleware) http.Handler {
 	if requireAuth == nil {
 		requireAuth = func(next http.Handler) http.Handler { return next }
 	}
@@ -20,9 +20,9 @@ func NewRouter(orderService *application.OrderService, requireAuth middleware.Mi
 	mux.Handle("POST /orders/{id}/confirm", requireAuth(ConfirmOrderHandler(orderService)))
 	mux.Handle("POST /orders/{id}/cancel", requireAuth(CancelOrderHandler(orderService)))
 
-	return middleware.Chain(
+	return sharedmiddleware.Chain(
 		mux,
-		middleware.Logging(),
-		middleware.Metrics("order"),
+		sharedmiddleware.Logging(),
+		sharedmiddleware.Metrics("order"),
 	)
 }

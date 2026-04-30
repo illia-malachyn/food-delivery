@@ -15,7 +15,7 @@ func (stubJWTVerifier) VerifyAccessToken(token string) error {
 	if token == "valid-token" {
 		return nil
 	}
-	return errors.New("invalid")
+	return errors.New("invalid token")
 }
 
 func TestRequireJWT_AllowsRequestWithValidBearerToken(t *testing.T) {
@@ -25,7 +25,7 @@ func TestRequireJWT_AllowsRequestWithValidBearerToken(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}), RequireJWT(stubJWTVerifier{}))
 
-	req := httptest.NewRequest(http.MethodPost, "/orders", nil)
+	req := httptest.NewRequest(http.MethodPost, "/resource", nil)
 	req.Header.Set("Authorization", "Bearer valid-token")
 	rec := httptest.NewRecorder()
 
@@ -41,7 +41,7 @@ func TestRequireJWT_RejectsMissingHeader(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}), RequireJWT(stubJWTVerifier{}))
 
-	req := httptest.NewRequest(http.MethodPost, "/orders", nil)
+	req := httptest.NewRequest(http.MethodPost, "/resource", nil)
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
@@ -56,7 +56,7 @@ func TestRequireJWT_RejectsInvalidToken(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}), RequireJWT(stubJWTVerifier{}))
 
-	req := httptest.NewRequest(http.MethodPost, "/orders", nil)
+	req := httptest.NewRequest(http.MethodPost, "/resource", nil)
 	req.Header.Set("Authorization", "Bearer broken")
 	rec := httptest.NewRecorder()
 

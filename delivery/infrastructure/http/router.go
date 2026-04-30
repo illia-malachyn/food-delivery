@@ -5,7 +5,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/illia-malachyn/food-delivery/delivery/infrastructure/http/middleware"
+	sharedmiddleware "github.com/illia-malachyn/food-delivery/shared/http/middleware"
 )
 
 func NewRouter() http.Handler {
@@ -16,9 +16,9 @@ func NewRouter() http.Handler {
 		_, _ = w.Write([]byte("hello from delivery service"))
 	})
 
-	return middleware.Chain(
+	return sharedmiddleware.Chain(
 		mux,
-		middleware.Logging(),
-		middleware.Metrics("delivery"),
+		sharedmiddleware.Logging(),
+		sharedmiddleware.Metrics("delivery"),
 	)
 }

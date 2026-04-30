@@ -1,4 +1,4 @@
-package http
+package jwt
 
 import (
 	"crypto/rand"
@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
+	jwtlib "github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
 )
 
-func TestJWTVerifier_VerifyAccessToken(t *testing.T) {
+func TestVerifier_VerifyAccessToken(t *testing.T) {
 	t.Parallel()
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -22,14 +22,14 @@ func TestJWTVerifier_VerifyAccessToken(t *testing.T) {
 	require.NoError(t, err)
 
 	publicPEM := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: publicDER})
-	verifier, err := NewJWTVerifier(string(publicPEM), "food-delivery-auth")
+	verifier, err := NewVerifier(string(publicPEM), "food-delivery-auth")
 	require.NoError(t, err)
 
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.RegisteredClaims{
+	token := jwtlib.NewWithClaims(jwtlib.SigningMethodRS256, jwtlib.RegisteredClaims{
 		Issuer:    "food-delivery-auth",
 		Subject:   "user-1",
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(10 * time.Minute)),
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		ExpiresAt: jwtlib.NewNumericDate(time.Now().Add(10 * time.Minute)),
+		IssuedAt:  jwtlib.NewNumericDate(time.Now()),
 	})
 	signedToken, err := token.SignedString(privateKey)
 	require.NoError(t, err)
@@ -38,7 +38,7 @@ func TestJWTVerifier_VerifyAccessToken(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestJWTVerifier_RejectsTokenWithWrongIssuer(t *testing.T) {
+func TestVerifier_RejectsTokenWithWrongIssuer(t *testing.T) {
 	t.Parallel()
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -48,14 +48,14 @@ func TestJWTVerifier_RejectsTokenWithWrongIssuer(t *testing.T) {
 	require.NoError(t, err)
 
 	publicPEM := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: publicDER})
-	verifier, err := NewJWTVerifier(string(publicPEM), "food-delivery-auth")
+	verifier, err := NewVerifier(string(publicPEM), "food-delivery-auth")
 	require.NoError(t, err)
 
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.RegisteredClaims{
+	token := jwtlib.NewWithClaims(jwtlib.SigningMethodRS256, jwtlib.RegisteredClaims{
 		Issuer:    "another-issuer",
 		Subject:   "user-1",
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(10 * time.Minute)),
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		ExpiresAt: jwtlib.NewNumericDate(time.Now().Add(10 * time.Minute)),
+		IssuedAt:  jwtlib.NewNumericDate(time.Now()),
 	})
 	signedToken, err := token.SignedString(privateKey)
 	require.NoError(t, err)

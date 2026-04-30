@@ -9,7 +9,7 @@ import (
 
 	"github.com/illia-malachyn/food-delivery/order/application"
 	"github.com/illia-malachyn/food-delivery/order/application/mocks"
-	"github.com/illia-malachyn/food-delivery/order/infrastructure/http/middleware"
+	sharedmiddleware "github.com/illia-malachyn/food-delivery/shared/http/middleware"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,7 +29,7 @@ func TestRouter_ProtectedEndpointRequiresJWT(t *testing.T) {
 	upcaster := mocks.NewEventUpcaster(t)
 	service := application.NewOrderService(repository, upcaster)
 
-	router := NewRouter(service, middleware.RequireJWT(stubJWTVerifier{}))
+	router := NewRouter(service, sharedmiddleware.RequireJWT(stubJWTVerifier{}))
 
 	req := httptest.NewRequest(http.MethodPost, "/orders", strings.NewReader(`{"user_id":"user-1","item_id":"item-1","quantity":1}`))
 	rec := httptest.NewRecorder()
@@ -46,7 +46,7 @@ func TestRouter_PublicEndpointDoesNotRequireJWT(t *testing.T) {
 	upcaster := mocks.NewEventUpcaster(t)
 	service := application.NewOrderService(repository, upcaster)
 
-	router := NewRouter(service, middleware.RequireJWT(stubJWTVerifier{}))
+	router := NewRouter(service, sharedmiddleware.RequireJWT(stubJWTVerifier{}))
 
 	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
 	rec := httptest.NewRecorder()
