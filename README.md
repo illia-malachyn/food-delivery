@@ -269,6 +269,7 @@ Legend: `+` done, `~` partially done, no marker = todo. `?` = considering.
 - Load balancer (ALB) replacing nginx gateway, with TLS via ACM/Let's Encrypt
 - CD pipeline (GitHub Actions → ECR → ECS deploy)
 - Kubernetes deployment, eventually multi-region
+- Scale out with KEDA Scaler
 
 ### Stretch
 
