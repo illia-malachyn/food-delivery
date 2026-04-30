@@ -26,6 +26,19 @@ paths:
         '500':
           $ref: '#/components/responses/Error500'
 
+  /metrics:
+    get:
+      tags: [System]
+      summary: Prometheus metrics
+      operationId: authMetrics
+      responses:
+        '200':
+          description: Prometheus metrics response
+          content:
+            text/plain:
+              schema:
+                type: string
+
   /auth/register:
     post:
       tags: [Auth]

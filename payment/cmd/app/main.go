@@ -43,22 +43,12 @@ func main() {
 	paymentRepository := persistence.NewPostgresPaymentRepository(connPool)
 	paymentService := application.NewPaymentService(paymentRepository)
 
-	kafkaPublisher, err := infrastructure.NewKafkaPaymentEventPublisher(
-		sharedconfig.BrokersFromEnv("KAFKA_BROKERS", "localhost:9092"),
-		sharedconfig.GetOrDefault("KAFKA_TOPIC_PAYMENT_EVENTS", "payment.events"),
-	)
-	if err != nil {
-		log.Fatalf("cannot initialize payment kafka publisher: %v", err)
-	}
-	defer kafkaPublisher.Close()
-
 	orderEventsConsumer := infrastructure.NewOrderEventsConsumer(
 		sharedconfig.BrokersFromEnv("KAFKA_BROKERS", "localhost:9092"),
 		sharedconfig.GetOrDefault("KAFKA_TOPIC_ORDER_EVENTS", "order.events"),
 		sharedconfig.GetMany([]string{"PAYMENT_KAFKA_GROUP_ID", "KAFKA_GROUP_ID"}, "payment-service"),
 		paymentService,
 		paymentRepository,
-		kafkaPublisher,
 		int64(sharedconfig.IntFromEnv("PAYMENT_DEFAULT_AMOUNT", 1000)),
 		sharedconfig.GetMany([]string{"PAYMENT_DEFAULT_CURRENCY"}, "USD"),
 	)

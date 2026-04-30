@@ -16,9 +16,10 @@ import (
 )
 
 type inMemoryPaymentRepository struct {
-	mu      sync.Mutex
-	byID    map[string]*domain.Payment
-	byOrder map[string]string
+	mu         sync.Mutex
+	byID       map[string]*domain.Payment
+	byOrder    map[string]string
+	savedEvent []domain.DomainEvent
 }
 
 func newInMemoryPaymentRepository() *inMemoryPaymentRepository {
@@ -60,28 +61,17 @@ func (r *inMemoryPaymentRepository) Save(_ context.Context, payment *domain.Paym
 	return nil
 }
 
-type capturePublisher struct {
-	events []string
-}
-
-func (p *capturePublisher) Publish(_ context.Context, event paymentIntegrationEvent) error {
-	p.events = append(p.events, event.EventName())
-	return nil
-}
-
-func TestOrderEventsConsumer_HandleOrderPlacedPublishesPaymentConfirmed(t *testing.T) {
+func TestOrderEventsConsumer_HandleOrderPlacedMarksPaymentPaid(t *testing.T) {
 	t.Parallel()
 
 	repo := newInMemoryPaymentRepository()
 	service := application.NewPaymentService(repo)
-	publisher := &capturePublisher{}
 	consumer := NewOrderEventsConsumer(
 		[]string{"localhost:9092"},
 		"order.events",
 		"payment-service-test",
 		service,
 		repo,
-		publisher,
 		1000,
 		"USD",
 	)
@@ -99,23 +89,19 @@ func TestOrderEventsConsumer_HandleOrderPlacedPublishesPaymentConfirmed(t *testi
 	payment, err := repo.GetByOrderID(context.Background(), "order-1")
 	require.NoError(t, err)
 	assert.Equal(t, domain.PaymentStatusPaid, payment.Status())
-	require.Len(t, publisher.events, 1)
-	assert.Equal(t, "PaymentConfirmed", publisher.events[0])
 }
 
-func TestOrderEventsConsumer_HandleOrderCancelledPublishesPaymentRefunded(t *testing.T) {
+func TestOrderEventsConsumer_HandleOrderCancelledMarksPaymentRefunded(t *testing.T) {
 	t.Parallel()
 
 	repo := newInMemoryPaymentRepository()
 	service := application.NewPaymentService(repo)
-	publisher := &capturePublisher{}
 	consumer := NewOrderEventsConsumer(
 		[]string{"localhost:9092"},
 		"order.events",
 		"payment-service-test",
 		service,
 		repo,
-		publisher,
 		1000,
 		"USD",
 	)
@@ -138,8 +124,6 @@ func TestOrderEventsConsumer_HandleOrderCancelledPublishesPaymentRefunded(t *tes
 	updated, err := repo.GetByOrderID(context.Background(), "order-2")
 	require.NoError(t, err)
 	assert.Equal(t, domain.PaymentStatusRefunded, updated.Status())
-	require.Len(t, publisher.events, 1)
-	assert.Equal(t, "PaymentRefunded", publisher.events[0])
 }
 
 func TestOrderEventsConsumer_IgnoresUnknownEvent(t *testing.T) {
@@ -147,14 +131,12 @@ func TestOrderEventsConsumer_IgnoresUnknownEvent(t *testing.T) {
 
 	repo := newInMemoryPaymentRepository()
 	service := application.NewPaymentService(repo)
-	publisher := &capturePublisher{}
 	consumer := NewOrderEventsConsumer(
 		[]string{"localhost:9092"},
 		"order.events",
 		"payment-service-test",
 		service,
 		repo,
-		publisher,
 		1000,
 		"USD",
 	)
@@ -165,7 +147,6 @@ func TestOrderEventsConsumer_IgnoresUnknownEvent(t *testing.T) {
 		Headers: []kafka.Header{{Key: "event_name", Value: []byte("SomethingElse")}},
 	})
 	require.NoError(t, err)
-	assert.Empty(t, publisher.events)
 }
 
 func TestOrderEventsConsumer_ReturnsDecodeErrorForBrokenPayload(t *testing.T) {
@@ -173,14 +154,12 @@ func TestOrderEventsConsumer_ReturnsDecodeErrorForBrokenPayload(t *testing.T) {
 
 	repo := newInMemoryPaymentRepository()
 	service := application.NewPaymentService(repo)
-	publisher := &capturePublisher{}
 	consumer := NewOrderEventsConsumer(
 		[]string{"localhost:9092"},
 		"order.events",
 		"payment-service-test",
 		service,
 		repo,
-		publisher,
 		1000,
 		"USD",
 	)

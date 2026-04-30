@@ -12,6 +12,9 @@
 .DS_Store
 **/.DS_Store
 
+# Local JWT keys
+**/keys/*.pem
+
 # Build outputs and binaries (all services)
 bin/
 **/bin/

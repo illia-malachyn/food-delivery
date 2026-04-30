@@ -2,8 +2,7 @@ name: CI Docker Build
 
 on:
   push:
-    branches:
-      - "**"
+    branches: ["main"]
   pull_request:
 
 jobs:
@@ -21,6 +20,9 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Generate local JWT keys
+        run: make jwt-keys
 
       - name: Build Docker image
         uses: docker/build-push-action@v6

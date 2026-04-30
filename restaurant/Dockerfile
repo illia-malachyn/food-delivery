@@ -22,5 +22,6 @@ WORKDIR /app
 COPY --from=builder /bin/restaurant-service /usr/local/bin/restaurant-service
 COPY --from=builder /bin/migrate /usr/local/bin/migrate
 COPY --from=builder /src/restaurant/database /app/database
+COPY --from=builder /src/restaurant/keys /app/keys
 
 ENTRYPOINT ["/usr/local/bin/restaurant-service"]

@@ -2,8 +2,7 @@ name: CI Build & Tests
 
 on:
   push:
-    branches:
-      - "**"
+    branches: ["main"]
   pull_request:
 
 permissions:
@@ -82,6 +81,9 @@ jobs:
 
       - name: Prepare env files for compose
         run: make env-init
+
+      - name: Generate local JWT keys
+        run: make jwt-keys
 
       - name: Start stack
         run: docker compose up --build -d

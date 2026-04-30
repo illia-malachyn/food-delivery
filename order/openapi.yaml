@@ -9,11 +9,39 @@ servers:
   - url: http://localhost:8080
 security: []
 paths:
+  /healthz:
+    get:
+      tags: [System]
+      summary: Health check
+      operationId: orderHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /metrics:
+    get:
+      tags: [System]
+      summary: Prometheus metrics
+      operationId: orderMetrics
+      responses:
+        '200':
+          description: Prometheus metrics response
+          content:
+            text/plain:
+              schema:
+                type: string
+
   /orders:
     post:
       tags: [Orders]
       summary: Create order
       operationId: createOrder
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -29,12 +57,16 @@ paths:
                 $ref: '#/components/schemas/CreateOrderResponse'
         '400':
           $ref: '#/components/responses/Error400Text'
+        '401':
+          $ref: '#/components/responses/Error401JSON'
 
   /orders/{id}/confirm:
     post:
       tags: [Orders]
       summary: Confirm order
       operationId: confirmOrder
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/OrderId'
       responses:
@@ -42,12 +74,16 @@ paths:
           description: Order confirmed
         '400':
           $ref: '#/components/responses/Error400Text'
+        '401':
+          $ref: '#/components/responses/Error401JSON'
 
   /orders/{id}/cancel:
     post:
       tags: [Orders]
       summary: Cancel order
       operationId: cancelOrder
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/OrderId'
       requestBody:
@@ -61,8 +97,16 @@ paths:
           description: Order canceled
         '400':
           $ref: '#/components/responses/Error400Text'
+        '401':
+          $ref: '#/components/responses/Error401JSON'
 
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   parameters:
     OrderId:
       name: id
@@ -80,8 +124,22 @@ components:
         text/plain:
           schema:
             type: string
+    Error401JSON:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
 
   schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok
+
     CreateOrderRequest:
       type: object
       additionalProperties: false
@@ -116,3 +174,10 @@ components:
         reason:
           type: string
           example: payment failed
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string

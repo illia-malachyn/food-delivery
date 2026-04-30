@@ -9,11 +9,26 @@ servers:
   - url: http://delivery:8080
 security: []
 paths:
+  /metrics:
+    get:
+      tags: [System]
+      summary: Prometheus metrics
+      operationId: deliveryMetrics
+      responses:
+        '200':
+          description: Prometheus metrics response
+          content:
+            text/plain:
+              schema:
+                type: string
+
   /:
     get:
       tags: [System]
       summary: Service hello endpoint
       operationId: deliveryHello
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Service response
@@ -28,3 +43,28 @@ paths:
             text/plain:
               schema:
                 type: string
+        '401':
+          $ref: '#/components/responses/Error401'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Error401:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string

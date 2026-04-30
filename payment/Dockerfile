@@ -22,5 +22,6 @@ WORKDIR /app
 COPY --from=builder /bin/payment-service /usr/local/bin/payment-service
 COPY --from=builder /bin/migrate /usr/local/bin/migrate
 COPY --from=builder /src/payment/database /app/database
+COPY --from=builder /src/payment/keys /app/keys
 
 ENTRYPOINT ["/usr/local/bin/payment-service"]

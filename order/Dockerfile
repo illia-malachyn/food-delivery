@@ -22,6 +22,7 @@ WORKDIR /app
 COPY --from=builder /bin/order-service /usr/local/bin/order-service
 COPY --from=builder /bin/migrate /usr/local/bin/migrate
 COPY --from=builder /src/order/database /app/database
+COPY --from=builder /src/order/keys /app/keys
 
 EXPOSE 8080
 

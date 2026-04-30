@@ -22,5 +22,6 @@ WORKDIR /app
 COPY --from=builder /bin/delivery-service /usr/local/bin/delivery-service
 COPY --from=builder /bin/migrate /usr/local/bin/migrate
 COPY --from=builder /src/delivery/database /app/database
+COPY --from=builder /src/delivery/keys /app/keys
 
 ENTRYPOINT ["/usr/local/bin/delivery-service"]
