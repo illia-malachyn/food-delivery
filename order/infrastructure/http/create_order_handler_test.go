@@ -16,6 +16,8 @@ import (
 )
 
 func TestCreateOrderHandler_ReturnsCreatedOrderID(t *testing.T) {
+	t.Parallel()
+
 	repository := mockapp.NewOrderRepository(t)
 	upcaster := mockapp.NewEventUpcaster(t)
 	service := application.NewOrderService(repository, upcaster)
@@ -47,4 +49,19 @@ func TestCreateOrderHandler_ReturnsCreatedOrderID(t *testing.T) {
 	require.NoError(t, err)
 	_, parseErr := uuid.Parse(response.ID)
 	require.NoError(t, parseErr)
+}
+
+func TestCreateOrderHandler_RejectsInvalidJSON(t *testing.T) {
+	t.Parallel()
+
+	repository := mockapp.NewOrderRepository(t)
+	upcaster := mockapp.NewEventUpcaster(t)
+	service := application.NewOrderService(repository, upcaster)
+
+	req := httptest.NewRequest(http.MethodPost, "/orders", strings.NewReader(`{"user_id":`))
+	rec := httptest.NewRecorder()
+
+	CreateOrderHandler(service).ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
 }
