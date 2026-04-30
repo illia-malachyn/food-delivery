@@ -29,14 +29,19 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	connPool, err := pgxpool.New(ctx, sharedconfig.DatabaseURL("payment", sharedconfig.DBDefaults{
+	databaseURL := sharedconfig.DatabaseURL("payment", sharedconfig.DBDefaults{
 		User:     "payments_user",
 		Password: "payments_password",
 		Host:     "localhost",
 		Port:     "5432",
 		Name:     "payments",
 		SSLMode:  "disable",
-	}))
+	})
+	poolConfig, err := sharedconfig.DatabasePoolConfig("payment", databaseURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	connPool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -46,12 +51,15 @@ func main() {
 	if paymentProviderURL := sharedconfig.GetOrDefault("PAYMENT_PROVIDER_URL", ""); paymentProviderURL != "" {
 		paymentProvider = provider.NewHTTPPaymentProvider(paymentProviderURL, &http.Client{
 			Transport: resilience.NewCircuitBreakerRoundTripper(
-				resilience.NewRetryRoundTripper(http.DefaultTransport, resilience.RetryPolicy{
-					MaxAttempts:    sharedconfig.IntFromEnv("PAYMENT_PROVIDER_HTTP_RETRY_MAX_ATTEMPTS", 3),
-					InitialBackoff: sharedconfig.DurationFromEnv("PAYMENT_PROVIDER_HTTP_RETRY_INITIAL_BACKOFF", 100*time.Millisecond),
-					MaxBackoff:     sharedconfig.DurationFromEnv("PAYMENT_PROVIDER_HTTP_RETRY_MAX_BACKOFF", 2*time.Second),
-					Jitter:         sharedconfig.FloatFromEnv("PAYMENT_PROVIDER_HTTP_RETRY_JITTER", 0.2),
-				}),
+				resilience.NewBulkheadRoundTripper(
+					resilience.NewRetryRoundTripper(http.DefaultTransport, resilience.RetryPolicy{
+						MaxAttempts:    sharedconfig.IntFromEnv("PAYMENT_PROVIDER_HTTP_RETRY_MAX_ATTEMPTS", 3),
+						InitialBackoff: sharedconfig.DurationFromEnv("PAYMENT_PROVIDER_HTTP_RETRY_INITIAL_BACKOFF", 100*time.Millisecond),
+						MaxBackoff:     sharedconfig.DurationFromEnv("PAYMENT_PROVIDER_HTTP_RETRY_MAX_BACKOFF", 2*time.Second),
+						Jitter:         sharedconfig.FloatFromEnv("PAYMENT_PROVIDER_HTTP_RETRY_JITTER", 0.2),
+					}),
+					sharedconfig.IntFromEnv("PAYMENT_PROVIDER_HTTP_MAX_CONCURRENT", 10),
+				),
 				resilience.NewCircuitBreaker(resilience.CircuitBreakerConfig{
 					FailureThreshold: sharedconfig.IntFromEnv("PAYMENT_PROVIDER_CIRCUIT_FAILURE_THRESHOLD", 5),
 					OpenTimeout:      sharedconfig.DurationFromEnv("PAYMENT_PROVIDER_CIRCUIT_OPEN_TIMEOUT", 30*time.Second),
@@ -92,8 +100,11 @@ func main() {
 	router := httpinfra.NewRouter(paymentService, sharedmiddleware.RequireJWT(jwtVerifier))
 
 	server := &http.Server{
-		Addr:    ":8080",
-		Handler: router,
+		Addr:         ":8080",
+		Handler:      router,
+		ReadTimeout:  sharedconfig.DurationFromEnv("HTTP_READ_TIMEOUT", 10*time.Second),
+		WriteTimeout: sharedconfig.DurationFromEnv("HTTP_WRITE_TIMEOUT", 10*time.Second),
+		IdleTimeout:  sharedconfig.DurationFromEnv("HTTP_IDLE_TIMEOUT", 60*time.Second),
 	}
 
 	go func() {
