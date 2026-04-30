@@ -15,6 +15,7 @@ import (
 	httpinfra "github.com/illia-malachyn/food-delivery/delivery/infrastructure/http"
 	sharedconfig "github.com/illia-malachyn/food-delivery/shared/config"
 	sharedmiddleware "github.com/illia-malachyn/food-delivery/shared/http/middleware"
+	"github.com/illia-malachyn/food-delivery/shared/resilience"
 	sharedjwt "github.com/illia-malachyn/food-delivery/shared/security/jwt"
 )
 
@@ -52,7 +53,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:         ":8080",
-		Handler:      httpinfra.NewRouter(sharedmiddleware.RequireJWT(jwtVerifier)),
+		Handler:      resilience.NewTimeoutHandler(httpinfra.NewRouter(sharedmiddleware.RequireJWT(jwtVerifier)), sharedconfig.DurationFromEnv("HTTP_REQUEST_TIMEOUT", 3*time.Second)),
 		ReadTimeout:  sharedconfig.DurationFromEnv("HTTP_READ_TIMEOUT", 10*time.Second),
 		WriteTimeout: sharedconfig.DurationFromEnv("HTTP_WRITE_TIMEOUT", 10*time.Second),
 		IdleTimeout:  sharedconfig.DurationFromEnv("HTTP_IDLE_TIMEOUT", 60*time.Second),

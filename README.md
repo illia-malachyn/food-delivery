@@ -192,6 +192,7 @@ Grafana access:
 
 The implemented runtime resilience layer covers:
 
+- shared request timeouts, HTTP server timeouts, and PostgreSQL pool limits across all services
 - circuit breaker on `payment` outbound HTTP calls to the payment provider stub
 - retries with exponential backoff and jitter for payment-provider HTTP calls and the payment Kafka consumer
 - timeouts and bulkheads for HTTP servers, PostgreSQL pools, and payment-provider HTTP concurrency

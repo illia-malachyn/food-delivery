@@ -1,11 +1,21 @@
 # Resilience
 
-This project now has a small shared resilience layer for the service runtime paths that currently exist.
+This project now has a small shared resilience layer used by every service runtime path.
 
-## Circuit Breakers
+## Every Service
+
+All services use shared resilience/configuration for:
+
+- HTTP request deadlines through `resilience.NewTimeoutHandler`
+- HTTP server read, write, and idle timeouts
+- PostgreSQL pool limits, connection lifetime, idle lifetime, health checks, and connect timeout
+
+Per-service overrides can prefix the shared keys, for example `ORDER_DB_MAX_CONNS`, `PAYMENT_DB_CONNECT_TIMEOUT`, or `AUTH_DB_HEALTH_CHECK_PERIOD`.
+
+## Payment Outbound Calls
 
 - `payment` calls a payment provider through `payment/infrastructure/provider.HTTPPaymentProvider`.
-- Provider calls are wrapped with a circuit breaker.
+- Provider calls are wrapped with an HTTP bulkhead, retries, and a circuit breaker.
 - Retryable HTTP provider failures are `429` and `5xx`; network errors also count as failures.
 - When the circuit is open, calls fail fast with `resilience.ErrCircuitOpen` instead of tying up request or consumer work.
 
@@ -43,6 +53,7 @@ PAYMENT_CONSUMER_RETRY_JITTER=0.2
 
 ## Timeouts And Bulkheads
 
+- All HTTP handlers are wrapped with a request timeout.
 - All HTTP servers configure read, write, and idle timeouts.
 - Services with PostgreSQL access use pgx pool limits and connect timeouts.
 - Outbound payment-provider HTTP calls use a max-concurrency bulkhead.
@@ -63,6 +74,7 @@ Service-specific overrides can prefix the same keys, for example `ORDER_DB_MAX_C
 HTTP timeout knobs:
 
 ```text
+HTTP_REQUEST_TIMEOUT=3s
 HTTP_READ_TIMEOUT=10s
 HTTP_WRITE_TIMEOUT=10s
 HTTP_IDLE_TIMEOUT=60s

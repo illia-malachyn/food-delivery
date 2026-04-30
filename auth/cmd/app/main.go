@@ -18,6 +18,7 @@ import (
 	"github.com/illia-malachyn/food-delivery/auth/internal/security"
 	"github.com/illia-malachyn/food-delivery/auth/internal/session"
 	"github.com/illia-malachyn/food-delivery/auth/internal/user"
+	"github.com/illia-malachyn/food-delivery/shared/resilience"
 )
 
 func main() {
@@ -59,7 +60,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:         ":" + cfg.HTTP.Port,
-		Handler:      router,
+		Handler:      resilience.NewTimeoutHandler(router, cfg.HTTP.RequestTimeout),
 		ReadTimeout:  cfg.HTTP.ReadTimeout,
 		WriteTimeout: cfg.HTTP.WriteTimeout,
 		IdleTimeout:  cfg.HTTP.IdleTimeout,

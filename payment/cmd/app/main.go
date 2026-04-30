@@ -101,7 +101,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:         ":8080",
-		Handler:      router,
+		Handler:      resilience.NewTimeoutHandler(router, sharedconfig.DurationFromEnv("HTTP_REQUEST_TIMEOUT", 3*time.Second)),
 		ReadTimeout:  sharedconfig.DurationFromEnv("HTTP_READ_TIMEOUT", 10*time.Second),
 		WriteTimeout: sharedconfig.DurationFromEnv("HTTP_WRITE_TIMEOUT", 10*time.Second),
 		IdleTimeout:  sharedconfig.DurationFromEnv("HTTP_IDLE_TIMEOUT", 60*time.Second),
