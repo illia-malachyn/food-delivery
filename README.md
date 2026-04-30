@@ -11,6 +11,7 @@ Educational Go project for practicing Event-Driven Architecture (EDA) and Domain
 - `auth`
 
 Detailed domain/event modeling notes are in [`docs/architecture.md`](docs/architecture.md).
+Runtime resilience notes are in [`docs/resilience.md`](docs/resilience.md).
 Business rules by service:
 
 - [`docs/order-business-rules.md`](docs/order-business-rules.md)
@@ -36,6 +37,7 @@ Business rules by service:
   - Outbox relay + Kafka publisher (`order.events` topic by default)
 - `payment`:
   - consumes `order.events` from Kafka and updates payment state
+  - calls the payment provider stub with circuit breaker, retries, timeout, and HTTP bulkhead
   - writes transactional outbox rows in PostgreSQL (`payment_outbox`)
   - Debezium + Kafka Connect publishes outbox records to `payment.events`
 - `delivery`, `restaurant`:
@@ -98,6 +100,7 @@ Compose starts:
 - one migration job per service (`*-migrate`)
 - one CDC bootstrap job for payment (`payment-cdc-init`)
 - application containers: `order`, `payment`, `delivery`, `restaurant`, `auth`
+- `payment-provider` stub container for outbound payment HTTP calls
 
 Stop:
 
@@ -185,6 +188,16 @@ Grafana access:
 - credentials: `admin` / `admin`
 - preloaded dashboard: `Food Delivery Overview`
 
+## Resilience
+
+The implemented runtime resilience layer covers:
+
+- circuit breaker on `payment` outbound HTTP calls to the payment provider stub
+- retries with exponential backoff and jitter for payment-provider HTTP calls and the payment Kafka consumer
+- timeouts and bulkheads for HTTP servers, PostgreSQL pools, and payment-provider HTTP concurrency
+
+Configuration and defaults are documented in [`docs/resilience.md`](docs/resilience.md).
+
 ## Migrations
 
 The project has:
@@ -256,9 +269,9 @@ Legend: `+` done, `~` partially done, no marker = todo. `?` = considering.
 
 ### Resilience
 
-- Circuit breaker on outbound HTTP calls (e.g. payment provider stub)
-- Retries with exponential backoff + jitter (consumer side and HTTP clients)
-- Timeouts and bulkheads on shared resources (DB pools, HTTP clients)
+- `+` Circuit breaker on outbound HTTP calls (payment provider stub)
+- `+` Retries with exponential backoff + jitter (payment consumer and payment-provider HTTP client)
+- `+` Timeouts and bulkheads on shared resources (DB pools, HTTP servers, payment-provider HTTP client)
 
 ### Architectural patterns (pick one or two services)
 

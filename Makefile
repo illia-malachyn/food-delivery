@@ -1,4 +1,4 @@
-.PHONY: env-init jwt-keys migrate-up-all migrate-down-all migrate-version-all migrate-create-all migrate-up migrate-down migrate-version migrate-create regen-mocks openapi-lint unit-tests integration-tests e2e-tests
+.PHONY: env-init jwt-keys migrate-up-all migrate-down-all migrate-version-all migrate-create-all migrate-up migrate-down migrate-version migrate-create regen-mocks openapi-lint unit-tests shared-tests integration-tests e2e-tests
 
 SERVICES := order payment delivery restaurant auth
 SERVICE ?=
@@ -96,11 +96,16 @@ unit-tests:
 		echo "==> $(SERVICE): unit-tests"; \
 		(cd $(SERVICE) && GOWORK=off go test ./...); \
 	else \
+		echo "==> shared: unit-tests"; \
+		go test ./...; \
 		for svc in $(SERVICES); do \
 			echo "==> $$svc: unit-tests"; \
 			(cd $$svc && GOWORK=off go test ./...); \
 		done; \
 	fi
+
+shared-tests:
+	go test ./...
 
 e2e-tests:
 	go test -tags=e2e ./tests/e2e -v
