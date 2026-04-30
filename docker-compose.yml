@@ -63,8 +63,8 @@ services:
 
   order-migrate:
     build:
-      context: ./order
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./order/Dockerfile
     container_name: order-migrate
     env_file:
       - ./order/.env
@@ -79,8 +79,8 @@ services:
 
   order:
     build:
-      context: ./order
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./order/Dockerfile
     container_name: order
     env_file:
       - ./order/.env
@@ -96,8 +96,8 @@ services:
 
   payment:
     build:
-      context: ./payment
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./payment/Dockerfile
     container_name: payment
     env_file:
       - ./payment/.env
@@ -113,8 +113,8 @@ services:
 
   payment-migrate:
     build:
-      context: ./payment
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./payment/Dockerfile
     container_name: payment-migrate
     env_file:
       - ./payment/.env
@@ -129,8 +129,8 @@ services:
 
   delivery:
     build:
-      context: ./delivery
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./delivery/Dockerfile
     container_name: delivery
     depends_on:
       delivery-migrate:
@@ -138,8 +138,8 @@ services:
 
   delivery-migrate:
     build:
-      context: ./delivery
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./delivery/Dockerfile
     container_name: delivery-migrate
     env_file:
       - ./delivery/.env
@@ -154,8 +154,8 @@ services:
 
   restaurant:
     build:
-      context: ./restaurant
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./restaurant/Dockerfile
     container_name: restaurant
     depends_on:
       restaurant-migrate:
@@ -163,8 +163,8 @@ services:
 
   restaurant-migrate:
     build:
-      context: ./restaurant
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./restaurant/Dockerfile
     container_name: restaurant-migrate
     env_file:
       - ./restaurant/.env
@@ -179,8 +179,8 @@ services:
 
   auth:
     build:
-      context: ./auth
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./auth/Dockerfile
     container_name: auth
     env_file:
       - ./auth/.env
@@ -244,8 +244,8 @@ services:
 
   auth-migrate:
     build:
-      context: ./auth
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./auth/Dockerfile
     container_name: auth-migrate
     env_file:
       - ./auth/.env
