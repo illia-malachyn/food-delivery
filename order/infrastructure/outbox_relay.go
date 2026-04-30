@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -44,6 +45,9 @@ func (r *OutboxRelay) Run(ctx context.Context) {
 
 		publishedCount, err := r.publishPendingBatch(ctx)
 		if err != nil {
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return
+			}
 			log.Printf("outbox relay batch failed: %v", err)
 		}
 
@@ -70,9 +74,19 @@ func (r *OutboxRelay) publishPendingBatch(ctx context.Context) (int, error) {
 
 		for _, event := range events {
 			if err := r.publisher.Publish(ctx, event); err != nil {
-				log.Printf("outbox publish failed for event id=%s name=%s v=%d: %v", event.ID, event.EventName, event.EventVersion, err)
-				if updateErr := r.increaseRetryCount(ctx, tx, event.ID); updateErr != nil {
+				retryCount, updateErr := r.increaseRetryCount(ctx, tx, event.ID)
+				if updateErr != nil {
 					return updateErr
+				}
+				if retryCount <= 3 || retryCount%25 == 0 {
+					log.Printf(
+						"outbox publish retry=%d failed for event id=%s name=%s v=%d: %v",
+						retryCount,
+						event.ID,
+						event.EventName,
+						event.EventVersion,
+						err,
+					)
 				}
 				continue
 			}
@@ -140,9 +154,14 @@ func (r *OutboxRelay) markPublished(ctx context.Context, tx pgx.Tx, eventID stri
 	return nil
 }
 
-func (r *OutboxRelay) increaseRetryCount(ctx context.Context, tx pgx.Tx, eventID string) error {
-	if _, err := tx.Exec(ctx, `UPDATE outbox SET retry_count = retry_count + 1 WHERE id = $1`, eventID); err != nil {
-		return fmt.Errorf("increment retry_count for outbox event %s: %w", eventID, err)
+func (r *OutboxRelay) increaseRetryCount(ctx context.Context, tx pgx.Tx, eventID string) (int, error) {
+	var retryCount int
+	if err := tx.QueryRow(
+		ctx,
+		`UPDATE outbox SET retry_count = retry_count + 1 WHERE id = $1 RETURNING retry_count`,
+		eventID,
+	).Scan(&retryCount); err != nil {
+		return 0, fmt.Errorf("increment retry_count for outbox event %s: %w", eventID, err)
 	}
-	return nil
+	return retryCount, nil
 }
