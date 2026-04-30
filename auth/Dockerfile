@@ -22,6 +22,7 @@ WORKDIR /app
 COPY --from=builder /bin/auth-service /usr/local/bin/auth-service
 COPY --from=builder /bin/migrate /usr/local/bin/migrate
 COPY --from=builder /src/auth/database /app/database
+COPY --from=builder /src/auth/keys /app/keys
 
 EXPOSE 8080
 

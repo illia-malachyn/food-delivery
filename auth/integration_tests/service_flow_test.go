@@ -4,6 +4,10 @@ package auth_test
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"testing"
 	"time"
@@ -36,13 +40,27 @@ func TestServiceIntegration_RegisterRefreshLogoutFlow(t *testing.T) {
 	t.Cleanup(func() { _ = redisClient.Close() })
 	require.NoError(t, redisClient.Ping(ctx).Err())
 
-	tokenManager := security.NewJWTManager(config.JWTConfig{
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	privatePEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
+	})
+	publicPKIX, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	require.NoError(t, err)
+	publicPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: publicPKIX,
+	})
+
+	tokenManager, err := security.NewJWTManager(config.JWTConfig{
 		Issuer:        "auth-integration-test",
-		AccessSecret:  "integration-access-secret-very-long",
-		RefreshSecret: "integration-refresh-secret-very-long",
+		PrivateKeyPEM: string(privatePEM),
+		PublicKeyPEM:  string(publicPEM),
 		AccessTTL:     5 * time.Minute,
 		RefreshTTL:    time.Hour,
 	})
+	require.NoError(t, err)
 
 	refreshStore := session.NewRedisRefreshStore(redisClient)
 	usersRepo := user.NewPostgresRepository(db)

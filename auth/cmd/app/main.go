@@ -44,7 +44,10 @@ func main() {
 
 	userRepository := user.NewPostgresRepository(dbPool)
 	passwordHasher := security.NewBcryptHasher()
-	tokenManager := security.NewJWTManager(cfg.JWT)
+	tokenManager, err := security.NewJWTManager(cfg.JWT)
+	if err != nil {
+		log.Fatalf("cannot initialize JWT manager: %v", err)
+	}
 	refreshStore := session.NewRedisRefreshStore(redisClient)
 	authService := auth.NewService(userRepository, passwordHasher, tokenManager, refreshStore, cfg.JWT.RefreshTTL)
 	handler := httpapi.NewHandler(authService, cfg.Cookie, cfg.JWT.RefreshTTL, cfg.HTTP.RequestTimeout)

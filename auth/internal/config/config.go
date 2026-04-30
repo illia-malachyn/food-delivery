@@ -31,8 +31,8 @@ type RedisConfig struct {
 
 type JWTConfig struct {
 	Issuer        string
-	AccessSecret  string
-	RefreshSecret string
+	PrivateKeyPEM string
+	PublicKeyPEM  string
 	AccessTTL     time.Duration
 	RefreshTTL    time.Duration
 }
@@ -60,8 +60,8 @@ func Load() Config {
 		},
 		JWT: JWTConfig{
 			Issuer:        getEnvOrDefault("JWT_ISSUER", "food-delivery-auth"),
-			AccessSecret:  getEnvOrDefault("JWT_ACCESS_SECRET", "replace-this-access-secret"),
-			RefreshSecret: getEnvOrDefault("JWT_REFRESH_SECRET", "replace-this-refresh-secret"),
+			PrivateKeyPEM: jwtKeyFromEnv("JWT_PRIVATE_KEY_PATH", "JWT_PRIVATE_KEY"),
+			PublicKeyPEM:  jwtKeyFromEnv("JWT_PUBLIC_KEY_PATH", "JWT_PUBLIC_KEY"),
 			AccessTTL:     durationFromEnv("JWT_ACCESS_TTL", 15*time.Minute),
 			RefreshTTL:    durationFromEnv("JWT_REFRESH_TTL", 7*24*time.Hour),
 		},
@@ -73,10 +73,6 @@ func Load() Config {
 			HTTPOnly: boolFromEnv("REFRESH_COOKIE_HTTP_ONLY", true),
 			SameSite: sameSiteFromEnv("REFRESH_COOKIE_SAME_SITE", http.SameSiteLaxMode),
 		},
-	}
-
-	if len(cfg.JWT.AccessSecret) < 16 || len(cfg.JWT.RefreshSecret) < 16 {
-		log.Println("warning: JWT secrets are short; set strong secrets in env")
 	}
 
 	return cfg
@@ -175,4 +171,21 @@ func getEnvOrDefault(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func jwtKeyFromEnv(pathKey string, inlineKey string) string {
+	if path := strings.TrimSpace(os.Getenv(pathKey)); path != "" {
+		content, err := os.ReadFile(path)
+		if err != nil {
+			log.Fatalf("cannot read JWT key file %s=%q: %v", pathKey, path, err)
+		}
+		return string(content)
+	}
+
+	if inline := strings.TrimSpace(os.Getenv(inlineKey)); inline != "" {
+		return strings.ReplaceAll(inline, `\n`, "\n")
+	}
+
+	log.Fatalf("JWT key is not configured; set %s or %s", pathKey, inlineKey)
+	return ""
 }

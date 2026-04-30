@@ -1,6 +1,10 @@
 package security
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"testing"
 	"time"
 
@@ -8,13 +12,35 @@ import (
 )
 
 func newTestManager() TokenManager {
-	return NewJWTManager(config.JWTConfig{
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		panic(err)
+	}
+
+	privatePEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
+	})
+	publicPKIX, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		panic(err)
+	}
+	publicPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: publicPKIX,
+	})
+
+	manager, err := NewJWTManager(config.JWTConfig{
 		Issuer:        "test-issuer",
-		AccessSecret:  "test-access-secret-very-long",
-		RefreshSecret: "test-refresh-secret-very-long",
+		PrivateKeyPEM: string(privatePEM),
+		PublicKeyPEM:  string(publicPEM),
 		AccessTTL:     5 * time.Minute,
 		RefreshTTL:    30 * time.Minute,
 	})
+	if err != nil {
+		panic(err)
+	}
+	return manager
 }
 
 func TestJWTManagerIssueAndParse(t *testing.T) {

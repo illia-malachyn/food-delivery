@@ -1,6 +1,9 @@
 package security
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"strconv"
@@ -43,11 +46,11 @@ type TokenManager interface {
 }
 
 type jwtManager struct {
-	issuer        string
-	accessSecret  []byte
-	refreshSecret []byte
-	accessTTL     time.Duration
-	refreshTTL    time.Duration
+	issuer     string
+	privateKey *rsa.PrivateKey
+	publicKey  *rsa.PublicKey
+	accessTTL  time.Duration
+	refreshTTL time.Duration
 }
 
 type accessClaims struct {
@@ -61,14 +64,24 @@ type refreshClaims struct {
 	jwt.RegisteredClaims
 }
 
-func NewJWTManager(cfg config.JWTConfig) TokenManager {
-	return &jwtManager{
-		issuer:        cfg.Issuer,
-		accessSecret:  []byte(cfg.AccessSecret),
-		refreshSecret: []byte(cfg.RefreshSecret),
-		accessTTL:     cfg.AccessTTL,
-		refreshTTL:    cfg.RefreshTTL,
+func NewJWTManager(cfg config.JWTConfig) (TokenManager, error) {
+	privateKey, err := parseRSAPrivateKeyPEM(cfg.PrivateKeyPEM)
+	if err != nil {
+		return nil, err
 	}
+
+	publicKey, err := parseRSAPublicKeyPEM(cfg.PublicKeyPEM)
+	if err != nil {
+		return nil, err
+	}
+
+	return &jwtManager{
+		issuer:     cfg.Issuer,
+		privateKey: privateKey,
+		publicKey:  publicKey,
+		accessTTL:  cfg.AccessTTL,
+		refreshTTL: cfg.RefreshTTL,
+	}, nil
 }
 
 func (m *jwtManager) IssueTokenPair(userID int64, email string) (IssuedTokenPair, error) {
@@ -76,7 +89,7 @@ func (m *jwtManager) IssueTokenPair(userID int64, email string) (IssuedTokenPair
 	userIDStr := strconv.FormatInt(userID, 10)
 	refreshTokenID := uuid.NewString()
 
-	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims{
+	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodRS256, accessClaims{
 		Email: email,
 		Type:  "access",
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -87,12 +100,12 @@ func (m *jwtManager) IssueTokenPair(userID int64, email string) (IssuedTokenPair
 			NotBefore: jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(m.accessTTL)),
 		},
-	}).SignedString(m.accessSecret)
+	}).SignedString(m.privateKey)
 	if err != nil {
 		return IssuedTokenPair{}, err
 	}
 
-	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims{
+	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodRS256, refreshClaims{
 		Type: "refresh",
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        refreshTokenID,
@@ -102,7 +115,7 @@ func (m *jwtManager) IssueTokenPair(userID int64, email string) (IssuedTokenPair
 			NotBefore: jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(m.refreshTTL)),
 		},
-	}).SignedString(m.refreshSecret)
+	}).SignedString(m.privateKey)
 	if err != nil {
 		return IssuedTokenPair{}, err
 	}
@@ -123,11 +136,11 @@ func (m *jwtManager) ParseAccess(rawToken string) (AccessPrincipal, error) {
 	}
 
 	parsed, err := jwt.ParseWithClaims(token, &accessClaims{}, func(t *jwt.Token) (any, error) {
-		if t.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+		if t.Method.Alg() != jwt.SigningMethodRS256.Alg() {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
-		return m.accessSecret, nil
-	}, jwt.WithIssuer(m.issuer), jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+		return m.publicKey, nil
+	}, jwt.WithIssuer(m.issuer), jwt.WithValidMethods([]string{jwt.SigningMethodRS256.Alg()}))
 	if err != nil {
 		return AccessPrincipal{}, ErrInvalidAccessToken
 	}
@@ -152,11 +165,11 @@ func (m *jwtManager) ParseRefresh(rawToken string) (RefreshPrincipal, error) {
 	}
 
 	parsed, err := jwt.ParseWithClaims(token, &refreshClaims{}, func(t *jwt.Token) (any, error) {
-		if t.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+		if t.Method.Alg() != jwt.SigningMethodRS256.Alg() {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
-		return m.refreshSecret, nil
-	}, jwt.WithIssuer(m.issuer), jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+		return m.publicKey, nil
+	}, jwt.WithIssuer(m.issuer), jwt.WithValidMethods([]string{jwt.SigningMethodRS256.Alg()}))
 	if err != nil {
 		return RefreshPrincipal{}, ErrInvalidRefreshToken
 	}
@@ -172,4 +185,45 @@ func (m *jwtManager) ParseRefresh(rawToken string) (RefreshPrincipal, error) {
 	}
 
 	return RefreshPrincipal{UserID: userID, TokenID: claims.ID}, nil
+}
+
+func parseRSAPrivateKeyPEM(privateKeyPEM string) (*rsa.PrivateKey, error) {
+	pemData := strings.TrimSpace(strings.ReplaceAll(privateKeyPEM, `\n`, "\n"))
+	if pemData == "" {
+		return nil, fmt.Errorf("empty JWT private key")
+	}
+
+	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(pemData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse JWT private key: %w", err)
+	}
+	return privateKey, nil
+}
+
+func parseRSAPublicKeyPEM(publicKeyPEM string) (*rsa.PublicKey, error) {
+	pemData := strings.TrimSpace(strings.ReplaceAll(publicKeyPEM, `\n`, "\n"))
+	if pemData == "" {
+		return nil, fmt.Errorf("empty JWT public key")
+	}
+
+	block, _ := pem.Decode([]byte(pemData))
+	if block == nil {
+		return nil, fmt.Errorf("invalid JWT public key PEM block")
+	}
+
+	pkixKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err == nil {
+		rsaKey, ok := pkixKey.(*rsa.PublicKey)
+		if !ok {
+			return nil, fmt.Errorf("JWT public key is not RSA")
+		}
+		return rsaKey, nil
+	}
+
+	rsaKey, pkcs1Err := x509.ParsePKCS1PublicKey(block.Bytes)
+	if pkcs1Err == nil {
+		return rsaKey, nil
+	}
+
+	return nil, fmt.Errorf("failed to parse JWT public key: %w", err)
 }
