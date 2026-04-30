@@ -1,107 +1,56 @@
-# Payment Service Business Rules
+# Payment Service Business Rules (Learning Version)
 
-This document is the source of truth for the `payment` bounded context.
+This document is the source of truth for the simplified `payment` bounded context.
 
 ## Goal
 
-The payment service authorizes/captures funds for orders, handles retries and refunds, and publishes payment outcomes reliably.
+The payment service records whether an order payment is successful, failed, or refunded.
 
 ## Aggregate
 
 - Aggregate: `Payment`
 - Identity: `payment_id` (UUID)
 - Foreign identity: `order_id`
-- Core fields: `amount`, `currency`, `status`, `provider_transaction_id`, `failure_reason`, `created_at`
+- Core fields: `amount`, `currency`, `status`, `failure_reason`, `created_at`
 
-## Invariants (Simple)
+## Invariants
 
 1. `order_id` is required.
 2. `amount` must be greater than `0`.
 3. `currency` must be a 3-letter uppercase ISO code.
-4. `provider_transaction_id` must be unique per provider.
-5. One active payment attempt per order at a time.
 
 ## Lifecycle
 
 Valid statuses:
 
 - `pending`
-- `authorized`
-- `captured`
+- `paid`
 - `failed`
 - `refunded`
-- `voided`
 
 Allowed transitions:
 
-1. `pending -> authorized`
-2. `authorized -> captured`
-3. `authorized -> voided`
-4. `pending -> failed`
-5. `captured -> refunded` (full or partial)
+1. `pending -> paid`
+2. `pending -> failed`
+3. `paid -> refunded`
 
 Forbidden transitions:
 
-1. Capturing `pending` directly (unless provider is immediate-capture and mapped internally to authorize+capture).
-2. Refunding `authorized` (must void instead).
-3. Any transition out of `failed` except creating a new payment attempt.
-
-## Business Policies (Harder)
-
-1. Attempt policy:
-- Max 3 payment attempts per order in 15 minutes.
-- The 4th attempt is blocked with `PaymentLocked` reason `too_many_attempts`.
-
-2. Exactly-once capture intent:
-- For a given `order_id`, only one capture may succeed.
-- Duplicate capture requests must return already-captured response.
-
-3. Asynchronous provider policy:
-- Provider webhook may arrive before synchronous API response.
-- State machine must accept out-of-order callbacks idempotently.
-
-4. Partial refund policy:
-- Total refunded amount cannot exceed captured amount.
-- Each partial refund must include business reason code.
-
-5. Fraud-hold policy:
-- High-risk score payments move to `pending_review` (substate under `pending`).
-- Orders in fraud hold cannot be confirmed until manual decision.
+1. Any transition out of `failed`.
+2. Refunding `pending` or `failed`.
+3. Marking `paid` or `failed` more than once.
 
 ## Event Policy
 
 Domain events:
 
 - `PaymentInitiated`
-- `PaymentAuthorized`
-- `PaymentCaptureRequested`
-- `PaymentCaptured`
+- `PaymentPaid`
 - `PaymentFailed`
 - `PaymentRefunded`
-- `PaymentVoided`
-
-Integration events:
-
-1. `PaymentConfirmed` (maps from `PaymentCaptured`)
-2. `PaymentFailed`
-3. `PaymentRefunded`
-
-## Cross-Context Contract Rules
-
-1. `PaymentConfirmed` must include `order_id`, `payment_id`, `amount`, `currency`, `occurred_at`, `version`.
-2. Payment service must publish only after local transaction commits (outbox rule).
-3. Consumers must deduplicate by provider callback ID and integration event ID.
 
 ## DDD Practice Scenarios
 
-Simple scenarios:
-
 1. Reject payment with `amount <= 0`.
-2. Reject refund greater than captured total.
-3. Ignore duplicate successful webhook.
-
-Hard scenarios:
-
-1. Callback race: `PaymentFailed` arrives, then delayed `PaymentCaptured` arrives from provider.
-2. Retry policy with circuit breaker for provider outage.
-3. Refund saga after delivery failure with partial compensation fees.
+2. Reject invalid status transitions.
+3. Allow only `paid` payments to be refunded.
