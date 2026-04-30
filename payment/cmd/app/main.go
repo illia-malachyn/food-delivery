@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 
 	"github.com/illia-malachyn/food-delivery/payment/application"
 	httpinfra "github.com/illia-malachyn/food-delivery/payment/infrastructure/http"
+	"github.com/illia-malachyn/food-delivery/payment/infrastructure/http/middleware"
 	"github.com/illia-malachyn/food-delivery/payment/infrastructure/persistence"
 )
 
@@ -32,7 +34,13 @@ func main() {
 
 	paymentRepository := persistence.NewPostgresPaymentRepository(connPool)
 	paymentService := application.NewPaymentService(paymentRepository)
-	router := httpinfra.NewRouter(paymentService)
+
+	jwtVerifier, err := httpinfra.NewJWTVerifier(jwtPublicKeyFromEnv(), jwtIssuerFromEnv())
+	if err != nil {
+		log.Fatalf("cannot initialize JWT verifier: %v", err)
+	}
+
+	router := httpinfra.NewRouter(paymentService, middleware.RequireJWT(jwtVerifier))
 
 	server := &http.Server{
 		Addr:    ":8080",
@@ -79,4 +87,24 @@ func getEnvOrDefaultMany(keys []string, fallback string) string {
 		}
 	}
 	return fallback
+}
+
+func jwtPublicKeyFromEnv() string {
+	if path := strings.TrimSpace(getEnvOrDefaultMany([]string{"PAYMENT_JWT_PUBLIC_KEY_PATH", "JWT_PUBLIC_KEY_PATH"}, "")); path != "" {
+		content, err := os.ReadFile(path)
+		if err != nil {
+			log.Fatalf("cannot read JWT public key file %q: %v", path, err)
+		}
+		return string(content)
+	}
+
+	key := strings.TrimSpace(getEnvOrDefaultMany([]string{"PAYMENT_JWT_PUBLIC_KEY", "JWT_PUBLIC_KEY"}, ""))
+	if key == "" {
+		log.Fatal("JWT public key is not configured; set PAYMENT_JWT_PUBLIC_KEY(_PATH) or JWT_PUBLIC_KEY(_PATH)")
+	}
+	return key
+}
+
+func jwtIssuerFromEnv() string {
+	return getEnvOrDefaultMany([]string{"PAYMENT_JWT_ISSUER", "JWT_ISSUER"}, "")
 }

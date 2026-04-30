@@ -9,17 +9,21 @@ import (
 	"github.com/illia-malachyn/food-delivery/payment/infrastructure/http/middleware"
 )
 
-func NewRouter(paymentService *application.PaymentService) http.Handler {
+func NewRouter(paymentService *application.PaymentService, requireAuth middleware.Middleware) http.Handler {
+	if requireAuth == nil {
+		requireAuth = func(next http.Handler) http.Handler { return next }
+	}
+
 	mux := http.NewServeMux()
 	mux.Handle("GET /metrics", promhttp.Handler())
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("hello from payment service"))
 	})
-	mux.Handle("POST /payments", CreatePaymentHandler(paymentService))
-	mux.Handle("POST /payments/{id}/pay", MarkPaidHandler(paymentService))
-	mux.Handle("POST /payments/{id}/fail", MarkFailedHandler(paymentService))
-	mux.Handle("POST /payments/{id}/refund", RefundPaymentHandler(paymentService))
+	mux.Handle("POST /payments", requireAuth(CreatePaymentHandler(paymentService)))
+	mux.Handle("POST /payments/{id}/pay", requireAuth(MarkPaidHandler(paymentService)))
+	mux.Handle("POST /payments/{id}/fail", requireAuth(MarkFailedHandler(paymentService)))
+	mux.Handle("POST /payments/{id}/refund", requireAuth(RefundPaymentHandler(paymentService)))
 
 	return middleware.Chain(
 		mux,
