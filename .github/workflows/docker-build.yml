@@ -2,8 +2,7 @@ name: CI Docker Build
 
 on:
   push:
-    branches:
-      - "**"
+    branches: ["main"]
   pull_request:
 
 jobs:
