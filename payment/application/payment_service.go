@@ -9,6 +9,7 @@ import (
 
 var ErrCreatePaymentDTORequired = errors.New("create payment dto is required")
 var ErrPaymentRequired = errors.New("payment is required")
+var ErrPaymentNotFound = errors.New("payment not found")
 
 type PaymentService struct {
 	repository PaymentRepository
