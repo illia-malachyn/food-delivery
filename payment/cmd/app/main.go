@@ -16,8 +16,10 @@ import (
 	"github.com/illia-malachyn/food-delivery/payment/infrastructure"
 	httpinfra "github.com/illia-malachyn/food-delivery/payment/infrastructure/http"
 	"github.com/illia-malachyn/food-delivery/payment/infrastructure/persistence"
+	"github.com/illia-malachyn/food-delivery/payment/infrastructure/provider"
 	sharedconfig "github.com/illia-malachyn/food-delivery/shared/config"
 	sharedmiddleware "github.com/illia-malachyn/food-delivery/shared/http/middleware"
+	"github.com/illia-malachyn/food-delivery/shared/resilience"
 	sharedjwt "github.com/illia-malachyn/food-delivery/shared/security/jwt"
 )
 
@@ -40,8 +42,22 @@ func main() {
 	}
 	defer connPool.Close()
 
+	paymentProvider := application.NewNoopPaymentProvider()
+	if paymentProviderURL := sharedconfig.GetOrDefault("PAYMENT_PROVIDER_URL", ""); paymentProviderURL != "" {
+		paymentProvider = provider.NewHTTPPaymentProvider(paymentProviderURL, &http.Client{
+			Transport: resilience.NewCircuitBreakerRoundTripper(
+				http.DefaultTransport,
+				resilience.NewCircuitBreaker(resilience.CircuitBreakerConfig{
+					FailureThreshold: sharedconfig.IntFromEnv("PAYMENT_PROVIDER_CIRCUIT_FAILURE_THRESHOLD", 5),
+					OpenTimeout:      sharedconfig.DurationFromEnv("PAYMENT_PROVIDER_CIRCUIT_OPEN_TIMEOUT", 30*time.Second),
+				}),
+			),
+			Timeout: sharedconfig.DurationFromEnv("PAYMENT_PROVIDER_HTTP_TIMEOUT", 2*time.Second),
+		})
+	}
+
 	paymentRepository := persistence.NewPostgresPaymentRepository(connPool)
-	paymentService := application.NewPaymentService(paymentRepository)
+	paymentService := application.NewPaymentService(paymentRepository, paymentProvider)
 
 	orderEventsConsumer := infrastructure.NewOrderEventsConsumer(
 		sharedconfig.BrokersFromEnv("KAFKA_BROKERS", "localhost:9092"),

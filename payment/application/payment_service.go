@@ -13,10 +13,18 @@ var ErrPaymentNotFound = errors.New("payment not found")
 
 type PaymentService struct {
 	repository PaymentRepository
+	provider   PaymentProvider
 }
 
-func NewPaymentService(repository PaymentRepository) *PaymentService {
-	return &PaymentService{repository: repository}
+func NewPaymentService(repository PaymentRepository, providers ...PaymentProvider) *PaymentService {
+	var provider PaymentProvider
+	if len(providers) > 0 {
+		provider = providers[0]
+	}
+	if provider == nil {
+		provider = NewNoopPaymentProvider()
+	}
+	return &PaymentService{repository: repository, provider: provider}
 }
 
 func (s *PaymentService) Create(ctx context.Context, dto *CreatePaymentDTO) (string, error) {
@@ -46,6 +54,10 @@ func (s *PaymentService) MarkPaid(ctx context.Context, paymentID string) error {
 		return err
 	}
 
+	if err := s.provider.Capture(ctx, payment.ID(), payment.Amount(), payment.Currency()); err != nil {
+		return err
+	}
+
 	return s.persist(ctx, payment)
 }
 
@@ -69,6 +81,10 @@ func (s *PaymentService) Refund(ctx context.Context, paymentID string) error {
 	}
 
 	if err := payment.Refund(); err != nil {
+		return err
+	}
+
+	if err := s.provider.Refund(ctx, payment.ID()); err != nil {
 		return err
 	}
 
