@@ -87,7 +87,7 @@ jobs:
         run: docker compose up --build -d
 
       - name: Run e2e tests
-        run: make e2e
+        run: make e2e-tests
 
       - name: Compose logs on failure
         if: failure()
