@@ -34,7 +34,11 @@ Business rules by service:
   - HTTP API served behind gateway (`localhost:8080/orders`)
   - PostgreSQL persistence
   - Outbox relay + Kafka publisher (`order.events` topic by default)
-- `payment`, `delivery`, `restaurant`:
+- `payment`:
+  - consumes `order.events` from Kafka and updates payment state
+  - writes transactional outbox rows in PostgreSQL (`payment_outbox`)
+  - Debezium + Kafka Connect publishes outbox records to `payment.events`
+- `delivery`, `restaurant`:
   - basic HTTP app stubs running on `:8080` inside containers
   - PostgreSQL migrations are wired
   - no host port published in `docker-compose.yml` yet
@@ -84,7 +88,9 @@ Compose starts:
 - `postgres` (`localhost:5432`)
 - `redis` (`localhost:6379`)
 - `kafka` (`localhost:9092`)
+- `kafka-connect` (`localhost:8083`)
 - one migration job per service (`*-migrate`)
+- one CDC bootstrap job for payment (`payment-cdc-init`)
 - application containers: `order`, `payment`, `delivery`, `restaurant`, `auth`
 
 Stop:
@@ -225,7 +231,7 @@ Legend: `+` done, `~` partially done, no marker = todo. `?` = considering.
 - `+` Outbox pattern with polling relay (solves dual-write)
 - `+` Kafka publisher with manual commits (`auto-commit=false`)
 - `~` Event versioning + upcasters (done for `OrderPlaced` only — generalize to all events)
-- CDC-based outbox publishing with Debezium (alternative to polling relay; compare trade-offs)
+- `+` CDC-based outbox publishing with Debezium for payment (`payment_outbox` -> `payment.events`)
 
 ### Eventing — consumer side (next focus)
 

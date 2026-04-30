@@ -33,13 +33,8 @@ type OrderEventsConsumer struct {
 	reader          *kafka.Reader
 	paymentService  *application.PaymentService
 	repository      application.PaymentRepository
-	publisher       paymentEventPublisher
 	defaultAmount   int64
 	defaultCurrency string
-}
-
-type paymentEventPublisher interface {
-	Publish(ctx context.Context, event paymentIntegrationEvent) error
 }
 
 func NewOrderEventsConsumer(
@@ -48,7 +43,6 @@ func NewOrderEventsConsumer(
 	groupID string,
 	paymentService *application.PaymentService,
 	repository application.PaymentRepository,
-	publisher paymentEventPublisher,
 	defaultAmount int64,
 	defaultCurrency string,
 ) *OrderEventsConsumer {
@@ -74,7 +68,6 @@ func NewOrderEventsConsumer(
 		reader:          reader,
 		paymentService:  paymentService,
 		repository:      repository,
-		publisher:       publisher,
 		defaultAmount:   defaultAmount,
 		defaultCurrency: defaultCurrency,
 	}
@@ -163,23 +156,10 @@ func (c *OrderEventsConsumer) handleOrderPlaced(ctx context.Context, payload []b
 	}
 
 	if payment.Status() == domain.PaymentStatusFailed {
-		return c.publisher.Publish(ctx, PaymentFailedEvent{
-			Version:    1,
-			OrderID:    payment.OrderID(),
-			PaymentID:  payment.ID(),
-			Reason:     payment.FailureReason(),
-			OccurredAt: time.Now().UTC(),
-		})
+		return nil
 	}
 
-	return c.publisher.Publish(ctx, PaymentConfirmedEvent{
-		Version:    1,
-		OrderID:    payment.OrderID(),
-		PaymentID:  payment.ID(),
-		Amount:     payment.Amount(),
-		Currency:   payment.Currency(),
-		OccurredAt: time.Now().UTC(),
-	})
+	return nil
 }
 
 func (c *OrderEventsConsumer) handleOrderCancelled(ctx context.Context, payload []byte) error {
@@ -201,33 +181,12 @@ func (c *OrderEventsConsumer) handleOrderCancelled(ctx context.Context, payload 
 		if err := c.paymentService.Refund(ctx, payment.ID()); err != nil {
 			return err
 		}
-		payment, err = c.repository.GetByID(ctx, payment.ID())
-		if err != nil {
-			return err
-		}
-		return c.publisher.Publish(ctx, PaymentRefundedEvent{
-			Version:    1,
-			OrderID:    payment.OrderID(),
-			PaymentID:  payment.ID(),
-			Amount:     payment.Amount(),
-			Currency:   payment.Currency(),
-			OccurredAt: time.Now().UTC(),
-		})
+		return nil
 	case domain.PaymentStatusPending:
 		if err := c.paymentService.MarkFailed(ctx, payment.ID(), "order_cancelled"); err != nil {
 			return err
 		}
-		payment, err = c.repository.GetByID(ctx, payment.ID())
-		if err != nil {
-			return err
-		}
-		return c.publisher.Publish(ctx, PaymentFailedEvent{
-			Version:    1,
-			OrderID:    payment.OrderID(),
-			PaymentID:  payment.ID(),
-			Reason:     payment.FailureReason(),
-			OccurredAt: time.Now().UTC(),
-		})
+		return nil
 	default:
 		return nil
 	}

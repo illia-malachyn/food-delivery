@@ -2,6 +2,7 @@ package persistence
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -71,8 +72,18 @@ func (r *PostgresPaymentRepository) getOne(ctx context.Context, query string, ar
 	return payment, nil
 }
 
-func (r *PostgresPaymentRepository) Save(ctx context.Context, payment *domain.Payment, _ []domain.DomainEvent) error {
-	_, err := r.connPool.Exec(
+func (r *PostgresPaymentRepository) Save(ctx context.Context, payment *domain.Payment, events []domain.DomainEvent) error {
+	return pgx.BeginFunc(ctx, r.connPool, func(tx pgx.Tx) error {
+		if err := upsertPayment(ctx, tx, payment); err != nil {
+			return err
+		}
+
+		return appendOutboxEvents(ctx, tx, payment, events)
+	})
+}
+
+func upsertPayment(ctx context.Context, tx pgx.Tx, payment *domain.Payment) error {
+	_, err := tx.Exec(
 		ctx,
 		`INSERT INTO payments (id, order_id, amount, currency, status, failure_reason)
 		 VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''))
@@ -96,6 +107,46 @@ func (r *PostgresPaymentRepository) Save(ctx context.Context, payment *domain.Pa
 	)
 	if err != nil {
 		return fmt.Errorf("cannot save payment: %w", err)
+	}
+
+	return nil
+}
+
+func appendOutboxEvents(ctx context.Context, tx pgx.Tx, payment *domain.Payment, events []domain.DomainEvent) error {
+	for _, event := range events {
+		record, ok, err := mapDomainEventToOutboxRecord(payment, event)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			continue
+		}
+
+		payload, marshalErr := json.Marshal(record.payload)
+		if marshalErr != nil {
+			return fmt.Errorf("cannot marshal payment outbox payload for %s: %w", record.eventName, marshalErr)
+		}
+
+		_, execErr := tx.Exec(
+			ctx,
+			`INSERT INTO payment_outbox (
+				aggregate_type,
+				aggregate_id,
+				event_name,
+				event_version,
+				payload,
+				occurred_at
+			) VALUES ($1, $2, $3, $4, $5, $6)`,
+			record.aggregateType,
+			record.aggregateID,
+			record.eventName,
+			record.eventVersion,
+			payload,
+			record.occurredAt,
+		)
+		if execErr != nil {
+			return fmt.Errorf("cannot insert payment outbox event %s v%d: %w", record.eventName, record.eventVersion, execErr)
+		}
 	}
 
 	return nil
