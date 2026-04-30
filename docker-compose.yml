@@ -185,6 +185,8 @@ services:
       context: .
       dockerfile: ./delivery/Dockerfile
     container_name: delivery
+    env_file:
+      - ./delivery/.env
     depends_on:
       delivery-migrate:
         condition: service_completed_successfully
@@ -210,6 +212,8 @@ services:
       context: .
       dockerfile: ./restaurant/Dockerfile
     container_name: restaurant
+    env_file:
+      - ./restaurant/.env
     depends_on:
       restaurant-migrate:
         condition: service_completed_successfully

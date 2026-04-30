@@ -74,6 +74,12 @@ Create root `.env` from the template:
 make env-init
 ```
 
+Generate local JWT keys:
+
+```bash
+make jwt-keys
+```
+
 Start everything:
 
 ```bash

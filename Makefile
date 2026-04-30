@@ -1,9 +1,13 @@
-.PHONY: env-init migrate-up-all migrate-down-all migrate-version-all migrate-create-all migrate-up migrate-down migrate-version migrate-create regen-mocks openapi-lint unit-tests integration-tests e2e-tests
+.PHONY: env-init jwt-keys migrate-up-all migrate-down-all migrate-version-all migrate-create-all migrate-up migrate-down migrate-version migrate-create regen-mocks openapi-lint unit-tests integration-tests e2e-tests
 
 SERVICES := order payment delivery restaurant auth
 SERVICE ?=
 NAME ?=
 OPENAPI_SPECS := auth/openapi.yaml order/openapi.yaml payment/openapi.yaml delivery/openapi.yaml restaurant/openapi.yaml
+JWT_KEY_BITS ?= 2048
+JWT_PRIVATE_KEY := auth/keys/jwt_private.pem
+JWT_PUBLIC_KEY := auth/keys/jwt_public.pem
+JWT_PUBLIC_KEY_TARGETS := order/keys/jwt_public.pem payment/keys/jwt_public.pem delivery/keys/jwt_public.pem restaurant/keys/jwt_public.pem
 
 env-init:
 	@for pair in \
@@ -25,6 +29,22 @@ env-init:
 			cp "$$src" "$$dst"; \
 			echo "created: $$dst"; \
 		fi; \
+	done
+
+jwt-keys:
+	@command -v openssl >/dev/null 2>&1 || { echo "openssl is required"; exit 1; }
+	@mkdir -p auth/keys order/keys payment/keys delivery/keys restaurant/keys
+	@if [ ! -f "$(JWT_PRIVATE_KEY)" ]; then \
+		echo "==> generating $(JWT_PRIVATE_KEY)"; \
+		openssl genrsa -out "$(JWT_PRIVATE_KEY)" $(JWT_KEY_BITS); \
+	else \
+		echo "exists: $(JWT_PRIVATE_KEY)"; \
+	fi
+	@echo "==> deriving $(JWT_PUBLIC_KEY)"
+	@openssl rsa -in "$(JWT_PRIVATE_KEY)" -pubout -out "$(JWT_PUBLIC_KEY)"
+	@for target in $(JWT_PUBLIC_KEY_TARGETS); do \
+		cp "$(JWT_PUBLIC_KEY)" "$$target"; \
+		echo "synced: $$target"; \
 	done
 
 migrate-up-all:

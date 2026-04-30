@@ -20,6 +20,8 @@ For this project, keep E2E tests in the `5-15` scenario range and push most cove
 Start dependencies and services first:
 
 ```bash
+make env-init
+make jwt-keys
 docker compose up --build -d
 ```
 
