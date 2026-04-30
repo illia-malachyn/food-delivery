@@ -141,7 +141,7 @@ Current E2E coverage:
 Run:
 
 ```bash
-make e2e
+make e2e-tests
 ```
 
 Details and environment overrides are documented in [`tests/e2e/README.md`](tests/e2e/README.md).

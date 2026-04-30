@@ -26,7 +26,7 @@ docker compose up --build -d
 Run E2E suite:
 
 ```bash
-make e2e
+make e2e-tests
 ```
 
 Optional environment overrides:

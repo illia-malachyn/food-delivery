@@ -1,4 +1,4 @@
-.PHONY: env-init migrate-up-all migrate-down-all migrate-version-all migrate-create-all migrate-up migrate-down migrate-version migrate-create regen-mocks openapi-lint unit-tests integration-tests e2e-tests integration e2e
+.PHONY: env-init migrate-up-all migrate-down-all migrate-version-all migrate-create-all migrate-up migrate-down migrate-version migrate-create regen-mocks openapi-lint unit-tests integration-tests e2e-tests
 
 SERVICES := order payment delivery restaurant auth
 SERVICE ?=
@@ -103,7 +103,3 @@ integration-tests:
 			fi; \
 		done; \
 	fi
-
-e2e: e2e-tests
-
-integration: integration-tests
