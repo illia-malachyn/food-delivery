@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/illia-malachyn/food-delivery/payment/application"
+	"github.com/illia-malachyn/food-delivery/payment/infrastructure"
 	httpinfra "github.com/illia-malachyn/food-delivery/payment/infrastructure/http"
 	"github.com/illia-malachyn/food-delivery/payment/infrastructure/persistence"
 	sharedconfig "github.com/illia-malachyn/food-delivery/shared/config"
@@ -42,6 +43,27 @@ func main() {
 	paymentRepository := persistence.NewPostgresPaymentRepository(connPool)
 	paymentService := application.NewPaymentService(paymentRepository)
 
+	kafkaPublisher, err := infrastructure.NewKafkaPaymentEventPublisher(
+		sharedconfig.BrokersFromEnv("KAFKA_BROKERS", "localhost:9092"),
+		sharedconfig.GetOrDefault("KAFKA_TOPIC_PAYMENT_EVENTS", "payment.events"),
+	)
+	if err != nil {
+		log.Fatalf("cannot initialize payment kafka publisher: %v", err)
+	}
+	defer kafkaPublisher.Close()
+
+	orderEventsConsumer := infrastructure.NewOrderEventsConsumer(
+		sharedconfig.BrokersFromEnv("KAFKA_BROKERS", "localhost:9092"),
+		sharedconfig.GetOrDefault("KAFKA_TOPIC_ORDER_EVENTS", "order.events"),
+		sharedconfig.GetMany([]string{"PAYMENT_KAFKA_GROUP_ID", "KAFKA_GROUP_ID"}, "payment-service"),
+		paymentService,
+		paymentRepository,
+		kafkaPublisher,
+		int64(sharedconfig.IntFromEnv("PAYMENT_DEFAULT_AMOUNT", 1000)),
+		sharedconfig.GetMany([]string{"PAYMENT_DEFAULT_CURRENCY"}, "USD"),
+	)
+	defer orderEventsConsumer.Close()
+
 	jwtVerifier, err := sharedjwt.NewVerifier(
 		sharedconfig.JWTPublicKeyFromEnv("payment"),
 		sharedconfig.JWTIssuerFromEnv("payment"),
@@ -65,6 +87,8 @@ func main() {
 			log.Printf("payment server shutdown failed: %v", shutdownErr)
 		}
 	}()
+
+	go orderEventsConsumer.Run(ctx)
 
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)

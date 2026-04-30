@@ -24,13 +24,21 @@ func NewPostgresPaymentRepository(connPool *pgxpool.Pool) *PostgresPaymentReposi
 }
 
 func (r *PostgresPaymentRepository) GetByID(ctx context.Context, id string) (*domain.Payment, error) {
-	row := r.connPool.QueryRow(
-		ctx,
-		`SELECT id, order_id, amount::bigint, currency, status, COALESCE(failure_reason, ''), created_at
-		 FROM payments
-		 WHERE id = $1`,
-		id,
-	)
+	return r.getOne(ctx, `SELECT id, order_id, amount::bigint, currency, status, COALESCE(failure_reason, ''), created_at
+		FROM payments
+		WHERE id = $1`, id)
+}
+
+func (r *PostgresPaymentRepository) GetByOrderID(ctx context.Context, orderID string) (*domain.Payment, error) {
+	return r.getOne(ctx, `SELECT id, order_id, amount::bigint, currency, status, COALESCE(failure_reason, ''), created_at
+		FROM payments
+		WHERE order_id = $1
+		ORDER BY created_at DESC
+		LIMIT 1`, orderID)
+}
+
+func (r *PostgresPaymentRepository) getOne(ctx context.Context, query string, arg string) (*domain.Payment, error) {
+	row := r.connPool.QueryRow(ctx, query, arg)
 
 	var paymentID string
 	var orderID string

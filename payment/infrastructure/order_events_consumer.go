@@ -1,0 +1,243 @@
+package infrastructure
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
+	"strings"
+	"time"
+
+	"github.com/segmentio/kafka-go"
+
+	"github.com/illia-malachyn/food-delivery/payment/application"
+	"github.com/illia-malachyn/food-delivery/payment/domain"
+)
+
+type OrderPlacedEvent struct {
+	Version  int       `json:"version"`
+	OrderID  string    `json:"order_id"`
+	Quantity uint      `json:"quantity"`
+	Occurred time.Time `json:"occurred_at"`
+}
+
+type OrderCancelledEvent struct {
+	Version  int       `json:"version"`
+	OrderID  string    `json:"order_id"`
+	Reason   string    `json:"reason"`
+	Occurred time.Time `json:"occurred_at"`
+}
+
+type OrderEventsConsumer struct {
+	reader          *kafka.Reader
+	paymentService  *application.PaymentService
+	repository      application.PaymentRepository
+	publisher       paymentEventPublisher
+	defaultAmount   int64
+	defaultCurrency string
+}
+
+type paymentEventPublisher interface {
+	Publish(ctx context.Context, event paymentIntegrationEvent) error
+}
+
+func NewOrderEventsConsumer(
+	brokers []string,
+	topic string,
+	groupID string,
+	paymentService *application.PaymentService,
+	repository application.PaymentRepository,
+	publisher paymentEventPublisher,
+	defaultAmount int64,
+	defaultCurrency string,
+) *OrderEventsConsumer {
+	if groupID == "" {
+		groupID = "payment-service"
+	}
+	if defaultAmount <= 0 {
+		defaultAmount = 1000
+	}
+	if strings.TrimSpace(defaultCurrency) == "" {
+		defaultCurrency = "USD"
+	}
+
+	reader := kafka.NewReader(kafka.ReaderConfig{
+		Brokers:  brokers,
+		Topic:    topic,
+		GroupID:  groupID,
+		MinBytes: 1,
+		MaxBytes: 10e6,
+	})
+
+	return &OrderEventsConsumer{
+		reader:          reader,
+		paymentService:  paymentService,
+		repository:      repository,
+		publisher:       publisher,
+		defaultAmount:   defaultAmount,
+		defaultCurrency: defaultCurrency,
+	}
+}
+
+func (c *OrderEventsConsumer) Run(ctx context.Context) {
+	for {
+		message, err := c.reader.FetchMessage(ctx)
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return
+			}
+			log.Printf("payment consumer fetch failed: %v", err)
+			continue
+		}
+
+		if err := c.HandleMessage(ctx, message); err != nil {
+			log.Printf("payment consumer handle failed: %v", err)
+		}
+
+		if err := c.reader.CommitMessages(ctx, message); err != nil {
+			log.Printf("payment consumer commit failed: %v", err)
+		}
+	}
+}
+
+func (c *OrderEventsConsumer) HandleMessage(ctx context.Context, message kafka.Message) error {
+	eventName := headerValue(message.Headers, "event_name")
+	switch eventName {
+	case "OrderPlaced":
+		return c.handleOrderPlaced(ctx, message.Value)
+	case "OrderCancelled":
+		return c.handleOrderCancelled(ctx, message.Value)
+	default:
+		// Unknown events are ignored to keep consumer forward-compatible.
+		return nil
+	}
+}
+
+func (c *OrderEventsConsumer) Close() error {
+	if c == nil || c.reader == nil {
+		return nil
+	}
+	return c.reader.Close()
+}
+
+func (c *OrderEventsConsumer) handleOrderPlaced(ctx context.Context, payload []byte) error {
+	var event OrderPlacedEvent
+	if err := json.Unmarshal(payload, &event); err != nil {
+		return fmt.Errorf("unmarshal OrderPlaced: %w", err)
+	}
+
+	payment, err := c.repository.GetByOrderID(ctx, event.OrderID)
+	if err != nil {
+		if !errors.Is(err, application.ErrPaymentNotFound) {
+			return err
+		}
+
+		paymentID, createErr := c.paymentService.Create(ctx, &application.CreatePaymentDTO{
+			OrderID:  event.OrderID,
+			Amount:   c.defaultAmount,
+			Currency: c.defaultCurrency,
+		})
+		if createErr != nil {
+			return createErr
+		}
+
+		if err := c.paymentService.MarkPaid(ctx, paymentID); err != nil {
+			return err
+		}
+
+		payment, err = c.repository.GetByID(ctx, paymentID)
+		if err != nil {
+			return err
+		}
+	}
+
+	if payment.Status() == domain.PaymentStatusPending {
+		if err := c.paymentService.MarkPaid(ctx, payment.ID()); err != nil {
+			return err
+		}
+		payment, err = c.repository.GetByID(ctx, payment.ID())
+		if err != nil {
+			return err
+		}
+	}
+
+	if payment.Status() == domain.PaymentStatusFailed {
+		return c.publisher.Publish(ctx, PaymentFailedEvent{
+			Version:    1,
+			OrderID:    payment.OrderID(),
+			PaymentID:  payment.ID(),
+			Reason:     payment.FailureReason(),
+			OccurredAt: time.Now().UTC(),
+		})
+	}
+
+	return c.publisher.Publish(ctx, PaymentConfirmedEvent{
+		Version:    1,
+		OrderID:    payment.OrderID(),
+		PaymentID:  payment.ID(),
+		Amount:     payment.Amount(),
+		Currency:   payment.Currency(),
+		OccurredAt: time.Now().UTC(),
+	})
+}
+
+func (c *OrderEventsConsumer) handleOrderCancelled(ctx context.Context, payload []byte) error {
+	var event OrderCancelledEvent
+	if err := json.Unmarshal(payload, &event); err != nil {
+		return fmt.Errorf("unmarshal OrderCancelled: %w", err)
+	}
+
+	payment, err := c.repository.GetByOrderID(ctx, event.OrderID)
+	if err != nil {
+		if errors.Is(err, application.ErrPaymentNotFound) {
+			return nil
+		}
+		return err
+	}
+
+	switch payment.Status() {
+	case domain.PaymentStatusPaid:
+		if err := c.paymentService.Refund(ctx, payment.ID()); err != nil {
+			return err
+		}
+		payment, err = c.repository.GetByID(ctx, payment.ID())
+		if err != nil {
+			return err
+		}
+		return c.publisher.Publish(ctx, PaymentRefundedEvent{
+			Version:    1,
+			OrderID:    payment.OrderID(),
+			PaymentID:  payment.ID(),
+			Amount:     payment.Amount(),
+			Currency:   payment.Currency(),
+			OccurredAt: time.Now().UTC(),
+		})
+	case domain.PaymentStatusPending:
+		if err := c.paymentService.MarkFailed(ctx, payment.ID(), "order_cancelled"); err != nil {
+			return err
+		}
+		payment, err = c.repository.GetByID(ctx, payment.ID())
+		if err != nil {
+			return err
+		}
+		return c.publisher.Publish(ctx, PaymentFailedEvent{
+			Version:    1,
+			OrderID:    payment.OrderID(),
+			PaymentID:  payment.ID(),
+			Reason:     payment.FailureReason(),
+			OccurredAt: time.Now().UTC(),
+		})
+	default:
+		return nil
+	}
+}
+
+func headerValue(headers []kafka.Header, key string) string {
+	for _, header := range headers {
+		if strings.EqualFold(header.Key, key) {
+			return string(header.Value)
+		}
+	}
+	return ""
+}

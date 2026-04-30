@@ -99,9 +99,17 @@ services:
       context: ./payment
       dockerfile: Dockerfile
     container_name: payment
+    env_file:
+      - ./payment/.env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      KAFKA_BROKERS: kafka:9092
     depends_on:
       payment-migrate:
         condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
 
   payment-migrate:
     build:
