@@ -6,10 +6,18 @@ on:
       - "**"
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build-and-test-services:
-    name: Build & Test ${{ matrix.service }}
+  unit-tests:
+    name: Unit Tests ${{ matrix.service }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -31,15 +39,20 @@ jobs:
       - name: Build
         run: go build ./...
 
-      - name: Run tests
+      - name: Run unit tests
         run: go test ./...
 
   integration-tests:
-    name: Integration Tests (auth)
+    name: Integration Tests ${{ matrix.service }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [auth, payment]
     defaults:
       run:
-        working-directory: auth
+        working-directory: ${{ matrix.service }}
 
     steps:
       - name: Checkout
@@ -48,14 +61,15 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: auth/go.mod
+          go-version-file: ${{ matrix.service }}/go.mod
 
       - name: Run integration tests
-        run: go test -tags=integration ./integration_tests -v
+        run: go test -tags=integration ./integration_tests/... -v
 
   e2e-tests:
     name: E2E Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
