@@ -18,6 +18,7 @@ import (
 	"github.com/illia-malachyn/food-delivery/order/application"
 	"github.com/illia-malachyn/food-delivery/order/infrastructure"
 	httpinfra "github.com/illia-malachyn/food-delivery/order/infrastructure/http"
+	"github.com/illia-malachyn/food-delivery/order/infrastructure/http/middleware"
 	"github.com/illia-malachyn/food-delivery/order/infrastructure/persistence"
 )
 
@@ -53,7 +54,13 @@ func main() {
 	postgresOrderRepository := persistence.NewPostgresOrderRepository(connPool)
 	eventUpcaster := application.NewIntegrationEventUpcaster()
 	orderService := application.NewOrderService(postgresOrderRepository, eventUpcaster)
-	router := httpinfra.NewRouter(orderService)
+
+	jwtVerifier, err := httpinfra.NewJWTVerifier(jwtPublicKeyFromEnv(), jwtIssuerFromEnv())
+	if err != nil {
+		log.Fatalf("cannot initialize JWT verifier: %v", err)
+	}
+
+	router := httpinfra.NewRouter(orderService, middleware.RequireJWT(jwtVerifier))
 
 	server := &http.Server{
 		Addr:    ":8080",
@@ -156,4 +163,24 @@ func getEnvOrDefault(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func jwtPublicKeyFromEnv() string {
+	if path := strings.TrimSpace(getEnvOrDefaultMany([]string{"ORDER_JWT_PUBLIC_KEY_PATH", "JWT_PUBLIC_KEY_PATH"}, "")); path != "" {
+		content, err := os.ReadFile(path)
+		if err != nil {
+			log.Fatalf("cannot read JWT public key file %q: %v", path, err)
+		}
+		return string(content)
+	}
+
+	key := strings.TrimSpace(getEnvOrDefaultMany([]string{"ORDER_JWT_PUBLIC_KEY", "JWT_PUBLIC_KEY"}, ""))
+	if key == "" {
+		log.Fatal("JWT public key is not configured; set ORDER_JWT_PUBLIC_KEY(_PATH) or JWT_PUBLIC_KEY(_PATH)")
+	}
+	return key
+}
+
+func jwtIssuerFromEnv() string {
+	return getEnvOrDefaultMany([]string{"ORDER_JWT_ISSUER", "JWT_ISSUER"}, "")
 }
