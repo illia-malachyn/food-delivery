@@ -59,14 +59,26 @@ func BrokersFromEnv(key string, fallback string) []string {
 }
 
 func DurationFromEnv(key string, fallback time.Duration) time.Duration {
-	raw := os.Getenv(key)
+	return DurationFromEnvMany([]string{key}, fallback)
+}
+
+func DurationFromEnvMany(keys []string, fallback time.Duration) time.Duration {
+	raw := ""
+	usedKey := ""
+	for _, key := range keys {
+		if value := os.Getenv(key); value != "" {
+			raw = value
+			usedKey = key
+			break
+		}
+	}
 	if raw == "" {
 		return fallback
 	}
 
 	parsed, err := time.ParseDuration(raw)
 	if err != nil {
-		log.Printf("invalid duration for %s=%q, using fallback %s", key, raw, fallback)
+		log.Printf("invalid duration for %s=%q, using fallback %s", usedKey, raw, fallback)
 		return fallback
 	}
 
@@ -74,14 +86,41 @@ func DurationFromEnv(key string, fallback time.Duration) time.Duration {
 }
 
 func IntFromEnv(key string, fallback int) int {
-	raw := os.Getenv(key)
+	return IntFromEnvMany([]string{key}, fallback)
+}
+
+func IntFromEnvMany(keys []string, fallback int) int {
+	raw := ""
+	usedKey := ""
+	for _, key := range keys {
+		if value := os.Getenv(key); value != "" {
+			raw = value
+			usedKey = key
+			break
+		}
+	}
 	if raw == "" {
 		return fallback
 	}
 
 	parsed, err := strconv.Atoi(raw)
 	if err != nil {
-		log.Printf("invalid int for %s=%q, using fallback %d", key, raw, fallback)
+		log.Printf("invalid int for %s=%q, using fallback %d", usedKey, raw, fallback)
+		return fallback
+	}
+
+	return parsed
+}
+
+func FloatFromEnv(key string, fallback float64) float64 {
+	raw := os.Getenv(key)
+	if raw == "" {
+		return fallback
+	}
+
+	parsed, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		log.Printf("invalid float for %s=%q, using fallback %f", key, raw, fallback)
 		return fallback
 	}
 

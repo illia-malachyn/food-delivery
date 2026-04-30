@@ -13,6 +13,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  shared-tests:
+    name: Shared Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build shared packages
+        run: go build ./...
+
+      - name: Run shared tests
+        run: go test ./...
+
   unit-tests:
     name: Unit Tests ${{ matrix.service }}
     runs-on: ubuntu-latest

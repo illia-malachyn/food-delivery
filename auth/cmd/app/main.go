@@ -18,6 +18,7 @@ import (
 	"github.com/illia-malachyn/food-delivery/auth/internal/security"
 	"github.com/illia-malachyn/food-delivery/auth/internal/session"
 	"github.com/illia-malachyn/food-delivery/auth/internal/user"
+	"github.com/illia-malachyn/food-delivery/shared/resilience"
 )
 
 func main() {
@@ -26,7 +27,11 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 
-	dbPool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	dbPoolConfig, err := cfg.DatabasePoolConfig()
+	if err != nil {
+		log.Fatalf("cannot configure postgres pool: %v", err)
+	}
+	dbPool, err := pgxpool.NewWithConfig(ctx, dbPoolConfig)
 	if err != nil {
 		log.Fatalf("cannot connect to postgres: %v", err)
 	}
@@ -55,10 +60,10 @@ func main() {
 
 	server := &http.Server{
 		Addr:         ":" + cfg.HTTP.Port,
-		Handler:      router,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		Handler:      resilience.NewTimeoutHandler(router, cfg.HTTP.RequestTimeout),
+		ReadTimeout:  cfg.HTTP.ReadTimeout,
+		WriteTimeout: cfg.HTTP.WriteTimeout,
+		IdleTimeout:  cfg.HTTP.IdleTimeout,
 	}
 
 	go func() {

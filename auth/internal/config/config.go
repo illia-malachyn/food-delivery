@@ -8,19 +8,34 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Config struct {
 	DatabaseURL string
+	Database    DatabaseConfig
 	HTTP        HTTPConfig
 	Redis       RedisConfig
 	JWT         JWTConfig
 	Cookie      CookieConfig
 }
 
+type DatabaseConfig struct {
+	MaxConns          int32
+	MinConns          int32
+	ConnectTimeout    time.Duration
+	MaxConnLifetime   time.Duration
+	MaxConnIdleTime   time.Duration
+	HealthCheckPeriod time.Duration
+}
+
 type HTTPConfig struct {
 	Port           string
 	RequestTimeout time.Duration
+	ReadTimeout    time.Duration
+	WriteTimeout   time.Duration
+	IdleTimeout    time.Duration
 }
 
 type RedisConfig struct {
@@ -49,9 +64,20 @@ type CookieConfig struct {
 func Load() Config {
 	cfg := Config{
 		DatabaseURL: databaseURLFromEnv(),
+		Database: DatabaseConfig{
+			MaxConns:          int32(intFromEnvMany([]string{"AUTH_DB_MAX_CONNS", "DB_MAX_CONNS"}, 10)),
+			MinConns:          int32(intFromEnvMany([]string{"AUTH_DB_MIN_CONNS", "DB_MIN_CONNS"}, 1)),
+			ConnectTimeout:    durationFromEnvMany([]string{"AUTH_DB_CONNECT_TIMEOUT", "DB_CONNECT_TIMEOUT"}, 5*time.Second),
+			MaxConnLifetime:   durationFromEnvMany([]string{"AUTH_DB_MAX_CONN_LIFETIME", "DB_MAX_CONN_LIFETIME"}, 30*time.Minute),
+			MaxConnIdleTime:   durationFromEnvMany([]string{"AUTH_DB_MAX_CONN_IDLE_TIME", "DB_MAX_CONN_IDLE_TIME"}, 5*time.Minute),
+			HealthCheckPeriod: durationFromEnvMany([]string{"AUTH_DB_HEALTH_CHECK_PERIOD", "DB_HEALTH_CHECK_PERIOD"}, 30*time.Second),
+		},
 		HTTP: HTTPConfig{
 			Port:           getEnvOrDefault("HTTP_PORT", "8080"),
 			RequestTimeout: durationFromEnv("HTTP_REQUEST_TIMEOUT", 3*time.Second),
+			ReadTimeout:    durationFromEnv("HTTP_READ_TIMEOUT", 10*time.Second),
+			WriteTimeout:   durationFromEnv("HTTP_WRITE_TIMEOUT", 10*time.Second),
+			IdleTimeout:    durationFromEnv("HTTP_IDLE_TIMEOUT", 60*time.Second),
 		},
 		Redis: RedisConfig{
 			Address:  getEnvOrDefault("REDIS_ADDR", "localhost:6379"),
@@ -76,6 +102,22 @@ func Load() Config {
 	}
 
 	return cfg
+}
+
+func (cfg Config) DatabasePoolConfig() (*pgxpool.Config, error) {
+	poolConfig, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("parse database pool config: %w", err)
+	}
+
+	poolConfig.MaxConns = cfg.Database.MaxConns
+	poolConfig.MinConns = cfg.Database.MinConns
+	poolConfig.ConnConfig.ConnectTimeout = cfg.Database.ConnectTimeout
+	poolConfig.MaxConnLifetime = cfg.Database.MaxConnLifetime
+	poolConfig.MaxConnIdleTime = cfg.Database.MaxConnIdleTime
+	poolConfig.HealthCheckPeriod = cfg.Database.HealthCheckPeriod
+
+	return poolConfig, nil
 }
 
 func databaseURLFromEnv() string {
@@ -128,14 +170,26 @@ func boolFromEnv(key string, fallback bool) bool {
 }
 
 func durationFromEnv(key string, fallback time.Duration) time.Duration {
-	raw := os.Getenv(key)
+	return durationFromEnvMany([]string{key}, fallback)
+}
+
+func durationFromEnvMany(keys []string, fallback time.Duration) time.Duration {
+	raw := ""
+	usedKey := ""
+	for _, key := range keys {
+		if value := os.Getenv(key); value != "" {
+			raw = value
+			usedKey = key
+			break
+		}
+	}
 	if raw == "" {
 		return fallback
 	}
 
 	parsed, err := time.ParseDuration(raw)
 	if err != nil {
-		log.Printf("invalid duration for %s=%q, using fallback %s", key, raw, fallback)
+		log.Printf("invalid duration for %s=%q, using fallback %s", usedKey, raw, fallback)
 		return fallback
 	}
 
@@ -143,14 +197,26 @@ func durationFromEnv(key string, fallback time.Duration) time.Duration {
 }
 
 func intFromEnv(key string, fallback int) int {
-	raw := os.Getenv(key)
+	return intFromEnvMany([]string{key}, fallback)
+}
+
+func intFromEnvMany(keys []string, fallback int) int {
+	raw := ""
+	usedKey := ""
+	for _, key := range keys {
+		if value := os.Getenv(key); value != "" {
+			raw = value
+			usedKey = key
+			break
+		}
+	}
 	if raw == "" {
 		return fallback
 	}
 
 	parsed, err := strconv.Atoi(raw)
 	if err != nil {
-		log.Printf("invalid int for %s=%q, using fallback %d", key, raw, fallback)
+		log.Printf("invalid int for %s=%q, using fallback %d", usedKey, raw, fallback)
 		return fallback
 	}
 

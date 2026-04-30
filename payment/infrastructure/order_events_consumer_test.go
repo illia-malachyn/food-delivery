@@ -6,6 +6,7 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/segmentio/kafka-go"
 	"github.com/stretchr/testify/assert"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/illia-malachyn/food-delivery/payment/application"
 	"github.com/illia-malachyn/food-delivery/payment/domain"
+	"github.com/illia-malachyn/food-delivery/shared/resilience"
 )
 
 type inMemoryPaymentRepository struct {
@@ -171,4 +173,53 @@ func TestOrderEventsConsumer_ReturnsDecodeErrorForBrokenPayload(t *testing.T) {
 	})
 	require.Error(t, err)
 	assert.False(t, errors.Is(err, application.ErrPaymentNotFound))
+}
+
+func TestOrderEventsConsumer_RetriesTransientHandlerFailures(t *testing.T) {
+	t.Parallel()
+
+	baseRepo := newInMemoryPaymentRepository()
+	transientErr := errors.New("transient repository failure")
+	repo := &transientOrderLookupRepository{inMemoryPaymentRepository: baseRepo, transientErr: transientErr}
+	service := application.NewPaymentService(repo)
+	consumer := NewOrderEventsConsumer(
+		[]string{"localhost:9092"},
+		"order.events",
+		"payment-service-test",
+		service,
+		repo,
+		1000,
+		"USD",
+		WithRetryPolicy(resilience.RetryPolicy{
+			MaxAttempts: 2,
+			Sleep: func(context.Context, time.Duration) error {
+				return nil
+			},
+		}),
+	)
+	defer consumer.Close()
+
+	payload, err := json.Marshal(OrderPlacedEvent{Version: 2, OrderID: "order-retry"})
+	require.NoError(t, err)
+
+	err = consumer.HandleMessageWithRetry(context.Background(), kafka.Message{
+		Value:   payload,
+		Headers: []kafka.Header{{Key: "event_name", Value: []byte("OrderPlaced")}},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 2, repo.attempts)
+}
+
+type transientOrderLookupRepository struct {
+	*inMemoryPaymentRepository
+	transientErr error
+	attempts     int
+}
+
+func (r *transientOrderLookupRepository) GetByOrderID(ctx context.Context, orderID string) (*domain.Payment, error) {
+	r.attempts++
+	if r.attempts == 1 {
+		return nil, r.transientErr
+	}
+	return r.inMemoryPaymentRepository.GetByOrderID(ctx, orderID)
 }

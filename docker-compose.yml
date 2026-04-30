@@ -135,6 +135,7 @@ services:
       DB_HOST: postgres
       DB_PORT: 5432
       KAFKA_BROKERS: kafka:9092
+      PAYMENT_PROVIDER_URL: http://payment-provider:8080
     depends_on:
       payment-migrate:
         condition: service_completed_successfully
@@ -142,6 +143,22 @@ services:
         condition: service_completed_successfully
       kafka:
         condition: service_healthy
+      payment-provider:
+        condition: service_healthy
+
+  payment-provider:
+    build:
+      context: .
+      dockerfile: ./payment/Dockerfile
+    container_name: payment-provider
+    env_file:
+      - ./payment/.env
+    entrypoint: ["/usr/local/bin/providerstub"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:$${PROVIDER_STUB_PORT:-8080}/health >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   payment-migrate:
     build:
@@ -187,6 +204,9 @@ services:
     container_name: delivery
     env_file:
       - ./delivery/.env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
     depends_on:
       delivery-migrate:
         condition: service_completed_successfully
@@ -214,6 +234,9 @@ services:
     container_name: restaurant
     env_file:
       - ./restaurant/.env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
     depends_on:
       restaurant-migrate:
         condition: service_completed_successfully

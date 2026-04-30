@@ -13,6 +13,7 @@ import (
 
 	"github.com/illia-malachyn/food-delivery/payment/application"
 	"github.com/illia-malachyn/food-delivery/payment/domain"
+	"github.com/illia-malachyn/food-delivery/shared/resilience"
 )
 
 type OrderPlacedEvent struct {
@@ -35,6 +36,15 @@ type OrderEventsConsumer struct {
 	repository      application.PaymentRepository
 	defaultAmount   int64
 	defaultCurrency string
+	retryPolicy     resilience.RetryPolicy
+}
+
+type OrderEventsConsumerOption func(*OrderEventsConsumer)
+
+func WithRetryPolicy(policy resilience.RetryPolicy) OrderEventsConsumerOption {
+	return func(c *OrderEventsConsumer) {
+		c.retryPolicy = resilience.NewRetryPolicy(policy)
+	}
 }
 
 func NewOrderEventsConsumer(
@@ -45,6 +55,7 @@ func NewOrderEventsConsumer(
 	repository application.PaymentRepository,
 	defaultAmount int64,
 	defaultCurrency string,
+	options ...OrderEventsConsumerOption,
 ) *OrderEventsConsumer {
 	if groupID == "" {
 		groupID = "payment-service"
@@ -64,13 +75,19 @@ func NewOrderEventsConsumer(
 		MaxBytes: 10e6,
 	})
 
-	return &OrderEventsConsumer{
+	consumer := &OrderEventsConsumer{
 		reader:          reader,
 		paymentService:  paymentService,
 		repository:      repository,
 		defaultAmount:   defaultAmount,
 		defaultCurrency: defaultCurrency,
+		retryPolicy:     resilience.NewRetryPolicy(resilience.RetryPolicy{}),
 	}
+	for _, option := range options {
+		option(consumer)
+	}
+
+	return consumer
 }
 
 func (c *OrderEventsConsumer) Run(ctx context.Context) {
@@ -84,7 +101,7 @@ func (c *OrderEventsConsumer) Run(ctx context.Context) {
 			continue
 		}
 
-		if err := c.HandleMessage(ctx, message); err != nil {
+		if err := c.HandleMessageWithRetry(ctx, message); err != nil {
 			log.Printf("payment consumer handle failed: %v", err)
 		}
 
@@ -92,6 +109,12 @@ func (c *OrderEventsConsumer) Run(ctx context.Context) {
 			log.Printf("payment consumer commit failed: %v", err)
 		}
 	}
+}
+
+func (c *OrderEventsConsumer) HandleMessageWithRetry(ctx context.Context, message kafka.Message) error {
+	return c.retryPolicy.Do(ctx, func(ctx context.Context) error {
+		return c.HandleMessage(ctx, message)
+	})
 }
 
 func (c *OrderEventsConsumer) HandleMessage(ctx context.Context, message kafka.Message) error {

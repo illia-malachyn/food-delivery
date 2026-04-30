@@ -25,6 +25,8 @@ make jwt-keys
 docker compose up --build -d
 ```
 
+The Compose stack includes `payment-provider`, a local stub used by the `payment` service for outbound provider calls.
+
 Run E2E suite:
 
 ```bash

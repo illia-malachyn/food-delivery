@@ -18,6 +18,7 @@ import (
 	"github.com/illia-malachyn/food-delivery/order/infrastructure/persistence"
 	sharedconfig "github.com/illia-malachyn/food-delivery/shared/config"
 	sharedmiddleware "github.com/illia-malachyn/food-delivery/shared/http/middleware"
+	"github.com/illia-malachyn/food-delivery/shared/resilience"
 	sharedjwt "github.com/illia-malachyn/food-delivery/shared/security/jwt"
 )
 
@@ -27,14 +28,19 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	connPool, err := pgxpool.New(ctx, sharedconfig.DatabaseURL("order", sharedconfig.DBDefaults{
+	databaseURL := sharedconfig.DatabaseURL("order", sharedconfig.DBDefaults{
 		User:     "orders_user",
 		Password: "orders_password",
 		Host:     "localhost",
 		Port:     "5432",
 		Name:     "orders",
 		SSLMode:  "disable",
-	}))
+	})
+	poolConfig, err := sharedconfig.DatabasePoolConfig("order", databaseURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	connPool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -72,8 +78,11 @@ func main() {
 	router := httpinfra.NewRouter(orderService, sharedmiddleware.RequireJWT(jwtVerifier))
 
 	server := &http.Server{
-		Addr:    ":8080",
-		Handler: router,
+		Addr:         ":8080",
+		Handler:      resilience.NewTimeoutHandler(router, sharedconfig.DurationFromEnv("HTTP_REQUEST_TIMEOUT", 3*time.Second)),
+		ReadTimeout:  sharedconfig.DurationFromEnv("HTTP_READ_TIMEOUT", 10*time.Second),
+		WriteTimeout: sharedconfig.DurationFromEnv("HTTP_WRITE_TIMEOUT", 10*time.Second),
+		IdleTimeout:  sharedconfig.DurationFromEnv("HTTP_IDLE_TIMEOUT", 60*time.Second),
 	}
 
 	go func() {
