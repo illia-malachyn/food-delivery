@@ -267,6 +267,7 @@ Legend: `+` done, `~` partially done, no marker = todo. `?` = considering.
 - Orchestration saga (Temporal or self-written state machine) — e.g. order → payment → restaurant → delivery with compensations
 - Choreography saga with distributed tracing (OpenTelemetry) — same flow, no central orchestrator
 - Decide RabbitMQ vs Kafka per use case: RPC-style commands (RabbitMQ) vs domain events (Kafka), and document the reasoning
+- Add a schema registry (Confluent Schema Registry or self-written) for Kafka domain events
 
 ### Resilience
 
@@ -279,13 +280,15 @@ Legend: `+` done, `~` partially done, no marker = todo. `?` = considering.
 - CQRS with separate read model (likely `restaurant` — heavy read, light write)
 - Clean-architecture Presenters in one service (compare to current handler-returns-DTO style)
 - `?` Event sourcing in one aggregate to see `Reconstitute()` in action
-- `?` Anti-corruption layer in a service that integrates with an external system
+- Anti-corruption layer in a service that integrates with an external system or behind old service
 - `?` `minVersion` on CQRS commands to fix read-your-writes consistency
 
 ### Shared platform code
 
-- Extract `shared/` module: middleware chain, outbox relay, Kafka consumer base, integration-event interface, upcaster pattern
-- Replace counter-based domain ID generator with UUID/ULID (current impl breaks with >1 replica)
+- `+` Extract `shared/` module: middleware chain, outbox relay, Kafka consumer base, integration-event interface, 
+  upcaster pattern
+- `+` Replace counter-based domain ID generator with UUID/ULID (current impl breaks with >1 replica)
+- Consumer contract testing
 
 ### Deployment & infrastructure
 
